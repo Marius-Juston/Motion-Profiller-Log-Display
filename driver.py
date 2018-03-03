@@ -4,6 +4,7 @@ from datetime import datetime
 import easygui
 import matplotlib.pyplot as plt
 import numpy as np
+import PyQt5
 
 
 def is_valid_log(file):
