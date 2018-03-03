@@ -74,8 +74,11 @@ def main():
                 file_data = np.genfromtxt(file, delimiter=',', dtype=np.float32, names=True)
 
                 if is_valid_log(file_data):
-                    date = datetime.strptime(os.path.basename(file), "%Y-%m-%d %H-%M-%S.csv")
-                    csv_files[date] = file_data
+                    try:
+                        name = datetime.strptime(os.path.basename(file), "%Y-%m-%d %H-%M-%S.csv")
+                    except ValueError:
+                        name = os.path.basename(file).split(".")[0]
+                    csv_files[name] = file_data
                 else:
                     easygui.msgbox(
                         "The file {0:s} is not a valid file it will be removed.".format(os.path.basename(file)))
