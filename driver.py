@@ -83,7 +83,7 @@ def main():
     openPath = "{0:s}\*.csv".format(os.path.expanduser("~"))
 
     while True:
-        print(openPath)
+        # print(openPath)
 
         files = easygui.fileopenbox('Please locate csv files', 'Specify File', default=openPath, filetypes='*.csv',
                                     multiple=True)
