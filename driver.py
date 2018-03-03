@@ -15,6 +15,28 @@ def is_valid_log(file):
         "pRight"))
 
 
+def sort_files(csv_files):
+    """
+    Returns a sorted list of keys. The dates will be sorted first and with latest first then
+    the non date objects are added and sorted alphabetically
+    :param csv_files: the dictionary to have the keys sorted
+    :return: a list with the keys for the dictionary sorted
+    """
+    rest = []
+    result = []
+
+    for file in csv_files.keys():
+        if isinstance(file, datetime):
+            result.append(file)
+        else:
+            rest.append(file)
+
+    result = sorted(result, reverse=True)
+    result.extend(sorted(rest))
+
+    return result
+
+
 def plot_graphs(csv_files):
     fig, axs = plt.subplots(ncols=len(csv_files), nrows=3)
 
@@ -23,10 +45,11 @@ def plot_graphs(csv_files):
     else:
         get_axis = lambda x, index: x[:, index]
 
-    for i, date in enumerate(sorted(csv_files, reverse=True)):
+    for i, date in enumerate(sort_files(csv_files)):
         path, errors, powers = get_axis(axs, i)
         current_file = csv_files[date]
 
+        # TODO make the path plot bigger than the other two plots because it is more important
         path.set_title(date)
         path.plot(current_file["xActual"], current_file["yActual"], c="r", label="Actual")
         path.scatter(current_file["xActual"][[0, -1]], current_file["yActual"][[0, -1]], c="r")
