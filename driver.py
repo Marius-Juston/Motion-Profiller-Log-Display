@@ -61,7 +61,7 @@ def plot_graphs(csv_files):
         handles, labels = path.get_legend_handles_labels()
         path.legend(handles, labels)
 
-        errors.plot(current_file["XTE"], c="r", label="???")
+        errors.plot(current_file["XTE"], c="r", label="Cross Track Error")
         errors.plot(current_file["lagE"], c="g", label="Lag Error")
         errors.plot(current_file["angleE"], c="b", label="Angle Error")
         errors.grid(True)
