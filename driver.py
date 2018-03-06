@@ -4,6 +4,7 @@ from datetime import datetime
 import easygui
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import gridspec
 
 
 def is_valid_log(file):
@@ -37,16 +38,37 @@ def sort_files(csv_files):
     return result
 
 
-def plot_graphs(csv_files):
-    fig, axs = plt.subplots(ncols=len(csv_files), nrows=3)
+def get_axis(grid_spec, index):
+    path = plt.subplot(grid_spec[0:2, index * 2: index * 2 + 2])
+    errors = plt.subplot(grid_spec[-1, index * 2])
+    powers = plt.subplot(grid_spec[-1, index * 2 + 1])
 
-    if len(csv_files) == 1:
-        get_axis = lambda x, index: x
-    else:
-        get_axis = lambda x, index: x[:, index]
+    return path, errors, powers
+
+
+import math
+
+
+def find_largest_factor(x):
+    i = math.ceil(math.sqrt(x))
+    while i >= 1:
+        if x % i == 0:
+            break
+        i -= 1
+    if x / i > x * (3 / 4):
+        i = round(x / (3 * 4))
+
+    return int(i)
+
+
+def plot_graphs(csv_files):
+    # fig, axs = plt.subplots(ncols=len(csv_files), nrows=3)
+    plt.tight_layout()
+
+    gs = gridspec.GridSpec(3, 2 * len(csv_files))
 
     for i, date in enumerate(sort_files(csv_files)):
-        path, errors, powers = get_axis(axs, i)
+        path, errors, powers = get_axis(gs, i)
         current_file = csv_files[date]
 
         # TODO make the path plot bigger than the other two plots because it is more important
@@ -61,6 +83,34 @@ def plot_graphs(csv_files):
         handles, labels = path.get_legend_handles_labels()
         path.legend(handles, labels)
 
+        # Uncomment this code to have the x and y scales the same
+        # min_dimension = min(current_file["xActual"].min(), current_file["xTarget"].min(), current_file["yActual"].min(),
+        #                     current_file["yTarget"].min())
+        # max_dimension = max(current_file["xActual"].max(), current_file["xTarget"].max(), current_file["yActual"].max(),
+        #                     current_file["yTarget"].max())
+        #
+        # path.set_xlim(xmin=-.1 + min_dimension, xmax=.1 + max_dimension)
+        # path.set_ylim(ymin=-.1 + min_dimension, ymax=.1 + max_dimension)
+        # path.set_aspect("equal", "box")
+
+        # Uncomment this code to have arrows on the target line tath shows the angle
+        # size = len(current_file["xActual"])
+        # print(size)
+        # print(find_largest_factor(size))
+        # for index in range(0, size, find_largest_factor(size)):
+        #     angle = current_file["angleActual"][index]
+        #
+        #     length = .00000000000001
+        #
+        #     if angle == 0:
+        #         angle = .000000000001
+        #
+        #     x = length / np.math.cos(angle)
+        #     y = length / np.math.sin(angle)
+        #
+        #     path.arrow(current_file["xActual"][index], current_file["yActual"][index], y, x, fc="k", ec="k",
+        #                head_width=0.05, head_length=0.1)
+
         errors.plot(current_file["XTE"], c="r", label="Cross Track Error")
         errors.plot(current_file["lagE"], c="g", label="Lag Error")
         errors.plot(current_file["angleE"], c="b", label="Angle Error")
@@ -70,7 +120,7 @@ def plot_graphs(csv_files):
         errors.set_xlim(0)
 
         powers.plot(current_file["pLeft"], c="r", label="Left Power")
-        powers.plot(current_file["pRight"], c="b", label="Left Power")
+        powers.plot(current_file["pRight"], c="b", label="Right Power")
         powers.grid(True)
         handles, labels = powers.get_legend_handles_labels()
         powers.legend(handles, labels)
