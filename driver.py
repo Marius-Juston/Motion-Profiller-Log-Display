@@ -1,10 +1,78 @@
+import math
 import os
 from datetime import datetime
 
 import easygui
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import gridspec
+from matplotlib import gridspec, patches, animation
+
+plt.rc_context()
+
+
+class AnimationDisplay(object):
+    def __init__(self, fig, association):
+        self.association = association
+        self.fig = fig
+        fig.canvas.callbacks.connect('button_press_event', self)
+        self.patches = {}
+        self.animations = {}
+
+    def set_interval(self, time, ax):
+        """
+        :param time: Time in seconds
+        :return:
+        """
+        self.animations[ax].event_source.interval = time * 1000
+
+    def animate(self, i, delta_times, file_data, ax):
+        # FIXME minimal issue of knowing what time delay to use. Time difference is unnoticeable only minor issue
+        self.set_interval(delta_times[i], ax)
+        patch = self.patches[ax]
+
+        angle = np.math.atan2(((patch.get_height()) / 2), (patch.get_width() / 2)) + np.deg2rad(
+            patch.angle)
+
+        d = np.sqrt((patch.get_width() / 2) ** 2 + (patch.get_height() / 2) ** 2)
+        sin = np.cos(angle)
+        x = ((d * sin) if sin != 0 else 0)
+        x = file_data["xActual"][i] - x
+        cos = np.sin(angle)
+        y = ((d * cos) if cos != 0 else 0)
+        y = file_data["yActual"][i] - y
+
+        patch.set_xy([x, y])
+        patch.angle = np.rad2deg(file_data["angleActual"][i])
+
+        if i == file_data.shape[0] - 1:
+            patch.set_visible(False)
+        return patch,
+
+    def __call__(self, event):
+        ax = event.inaxes
+        if not event.dblclick or ax is None or ax not in self.association:
+            return
+
+        file_data = self.association[ax]
+
+        delta_times = file_data["Time"]
+        delta_times = np.roll(delta_times, -1, 0) - delta_times
+        delta_times[-1] = 0
+
+        if ax not in self.patches:
+            # TODO fix bug where there are two patches on the animation. One is moving the other is not. Only want one.
+            patch = patches.Rectangle((0, 0), width=.78, height=.8, angle=0,
+                                      fc='y')
+            self.patches[ax] = ax.add_patch(patch)
+        else:
+            self.patches[ax].set_visible(True)
+            self.animations[ax].event_source.stop()
+
+        self.animations[ax] = animation.FuncAnimation(self.fig, self.animate,
+                                                      frames=len(delta_times),
+                                                      interval=0,  # FIXME start at 0?
+                                                      fargs=(delta_times, file_data, ax),
+                                                      blit=True, repeat=False)
 
 
 def is_valid_log(file):
@@ -38,15 +106,12 @@ def sort_files(csv_files):
     return result
 
 
-def get_axis(grid_spec, index):
-    path = plt.subplot(grid_spec[0:2, index * 2: index * 2 + 2])
-    errors = plt.subplot(grid_spec[-1, index * 2])
-    powers = plt.subplot(grid_spec[-1, index * 2 + 1])
+def get_axis(grid_spec, fig, index):
+    path = fig.add_subplot(grid_spec[0:2, index * 2: index * 2 + 2])
+    errors = fig.add_subplot(grid_spec[-1, index * 2])
+    powers = fig.add_subplot(grid_spec[-1, index * 2 + 1])
 
     return path, errors, powers
-
-
-import math
 
 
 def find_largest_factor(x):
@@ -63,13 +128,14 @@ def find_largest_factor(x):
 
 def plot_graphs(csv_files):
     # fig, axs = plt.subplots(ncols=len(csv_files), nrows=3)
-    plt.tight_layout()
-
+    fig = plt.figure()
     gs = gridspec.GridSpec(3, 2 * len(csv_files))
+    association = {}
 
     for i, date in enumerate(sort_files(csv_files)):
-        path, errors, powers = get_axis(gs, i)
+        path, errors, powers = get_axis(gs, fig, i)
         current_file = csv_files[date]
+        association[path] = current_file
 
         # TODO make the path plot bigger than the other two plots because it is more important
         path.set_title(date)
@@ -84,14 +150,14 @@ def plot_graphs(csv_files):
         path.legend(handles, labels)
 
         # Uncomment this code to have the x and y scales the same
-        # min_dimension = min(current_file["xActual"].min(), current_file["xTarget"].min(), current_file["yActual"].min(),
-        #                     current_file["yTarget"].min())
-        # max_dimension = max(current_file["xActual"].max(), current_file["xTarget"].max(), current_file["yActual"].max(),
-        #                     current_file["yTarget"].max())
-        #
-        # path.set_xlim(xmin=-.1 + min_dimension, xmax=.1 + max_dimension)
-        # path.set_ylim(ymin=-.1 + min_dimension, ymax=.1 + max_dimension)
-        # path.set_aspect("equal", "box")
+        min_dimension = min(current_file["xActual"].min(), current_file["xTarget"].min(), current_file["yActual"].min(),
+                            current_file["yTarget"].min())
+        max_dimension = max(current_file["xActual"].max(), current_file["xTarget"].max(), current_file["yActual"].max(),
+                            current_file["yTarget"].max())
+
+        path.set_xlim(xmin=-.1 + min_dimension, xmax=.1 + max_dimension)
+        path.set_ylim(ymin=-.1 + min_dimension, ymax=.1 + max_dimension)
+        path.set_aspect("equal", "box")
 
         # Uncomment this code to have arrows on the target line tath shows the angle
         # size = len(current_file["xActual"])
@@ -126,20 +192,24 @@ def plot_graphs(csv_files):
         powers.legend(handles, labels)
         powers.set_xlim(0)
 
+    gs.tight_layout(fig)
+
+    AnimationDisplay(fig, association)
+
     plt.show()
 
 
 def main():
-    openPath = "{0:s}\*.csv".format(os.path.expanduser("~"))
+    open_path = "{0:s}\*.csv".format(os.path.expanduser("~"))
 
     while True:
-        # print(openPath)
+        # print(open_path)
 
-        files = easygui.fileopenbox('Please locate csv files', 'Specify File', default=openPath, filetypes='*.csv',
+        files = easygui.fileopenbox('Please locate csv files', 'Specify File', default=open_path, filetypes='*.csv',
                                     multiple=True)
 
         if files:
-            openPath = "{0:s}\*.csv".format(os.path.dirname(files[0]))
+            open_path = "{0:s}\*.csv".format(os.path.dirname(files[0]))
 
             csv_files = {}
 
