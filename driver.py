@@ -10,6 +10,25 @@ from matplotlib import gridspec, patches, animation
 plt.rc_context()
 
 
+def get_coordinates_at_center(x_current, y_current, height, width, angle):
+    angle = np.math.atan2((height / 2), (width / 2)) + np.deg2rad(angle)
+
+    d = np.sqrt((width / 2) ** 2 + (height / 2) ** 2)
+    sin = np.cos(angle)
+    x = ((d * sin) if sin != 0 else 0)
+    x = x_current - x
+    cos = np.sin(angle)
+    y = ((d * cos) if cos != 0 else 0)
+    y = y_current - y
+
+    return x, y
+
+
+def set_visible(patches, value):
+    for patch in patches:
+        patch.set_visible(value)
+
+
 class AnimationDisplay(object):
     def __init__(self, fig, association):
         self.association = association
@@ -28,25 +47,22 @@ class AnimationDisplay(object):
     def animate(self, i, delta_times, file_data, ax):
         # FIXME minimal issue of knowing what time delay to use. Time difference is unnoticeable only minor issue
         self.set_interval(delta_times[i], ax)
-        patch = self.patches[ax]
+        patch_actual, patch_target = self.patches[ax]
 
-        angle = np.math.atan2(((patch.get_height()) / 2), (patch.get_width() / 2)) + np.deg2rad(
-            patch.angle)
+        patch_actual.set_xy(
+            get_coordinates_at_center(file_data["xActual"][i], file_data["yActual"][i], patch_actual.get_height(),
+                                      patch_actual.get_width(), patch_actual.angle))
+        patch_actual.angle = np.rad2deg(file_data["angleActual"][i])
 
-        d = np.sqrt((patch.get_width() / 2) ** 2 + (patch.get_height() / 2) ** 2)
-        sin = np.cos(angle)
-        x = ((d * sin) if sin != 0 else 0)
-        x = file_data["xActual"][i] - x
-        cos = np.sin(angle)
-        y = ((d * cos) if cos != 0 else 0)
-        y = file_data["yActual"][i] - y
-
-        patch.set_xy([x, y])
-        patch.angle = np.rad2deg(file_data["angleActual"][i])
+        patch_target.set_xy(
+            get_coordinates_at_center(file_data["xTarget"][i], file_data["yTarget"][i], patch_target.get_height(),
+                                      patch_target.get_width(), patch_target.angle))
+        patch_target.angle = np.rad2deg(file_data["angleTarget"][i])
 
         if i == file_data.shape[0] - 1:
-            patch.set_visible(False)
-        return patch,
+            patch_actual.set_visible(False)
+            patch_target.set_visible(False)
+        return patch_actual, patch_target,
 
     def __call__(self, event):
         ax = event.inaxes
@@ -61,11 +77,14 @@ class AnimationDisplay(object):
 
         if ax not in self.patches:
             # TODO fix bug where there are two patches on the animation. One is moving the other is not. Only want one.
-            patch = patches.Rectangle((0, 0), width=.78, height=.8, angle=0,
-                                      fc='y')
-            self.patches[ax] = ax.add_patch(patch)
+            patch_actual = patches.Rectangle((0, 0), width=.78, height=.8, angle=0,
+                                             fc='y', color="red")
+
+            patch_target = patches.Rectangle((0, 0), width=.78, height=.8, angle=0,
+                                             fc='y', color="blue")
+            self.patches[ax] = [ax.add_patch(patch_actual), ax.add_patch(patch_target)]
         else:
-            self.patches[ax].set_visible(True)
+            set_visible(self.patches[ax], True)
             self.animations[ax].event_source.stop()
 
         self.animations[ax] = animation.FuncAnimation(self.fig, self.animate,
