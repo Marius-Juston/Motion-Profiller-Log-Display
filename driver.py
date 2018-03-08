@@ -178,7 +178,7 @@ def plot_graphs(csv_files):
         path.set_ylim(ymin=-.1 + min_dimension, ymax=.1 + max_dimension)
         path.set_aspect("equal", "box")
 
-        # Uncomment this code to have arrows on the target line tath shows the angle
+        # Uncomment this code to have arrows on the target line that shows the angle the robot should be in
         # size = len(current_file["xActual"])
         # print(size)
         # print(find_largest_factor(size))
