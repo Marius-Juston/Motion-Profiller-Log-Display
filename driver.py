@@ -65,33 +65,35 @@ class AnimationDisplay(object):
         return patch_actual, patch_target,
 
     def __call__(self, event):
+
         ax = event.inaxes
-        if not event.dblclick or ax is None or ax not in self.association:
-            return
 
-        file_data = self.association[ax]
+        # TODO: Add event for when the event.button == 3 display the graphs associated with the graph clicked on on a new figure
 
-        delta_times = file_data["Time"]
-        delta_times = np.roll(delta_times, -1, 0) - delta_times
-        delta_times[-1] = 0
+        if ax is not None and ax in self.association and event.dblclick:
+            file_data = self.association[ax]
 
-        if ax not in self.patches:
-            # TODO fix bug where there are two patches on the animation. One is moving the other is not. Only want one.
-            patch_actual = patches.Rectangle((0, 0), width=.78, height=.8, angle=0,
-                                             fc='y', color="red")
+            delta_times = file_data["Time"]
+            delta_times = np.roll(delta_times, -1, 0) - delta_times
+            delta_times[-1] = 0
 
-            patch_target = patches.Rectangle((0, 0), width=.78, height=.8, angle=0,
-                                             fc='y', color="blue")
-            self.patches[ax] = [ax.add_patch(patch_actual), ax.add_patch(patch_target)]
-        else:
-            set_visible(self.patches[ax], True)
-            self.animations[ax].event_source.stop()
+            if ax not in self.patches:
+                # TODO fix bug where there are two patches on the animation. One is moving the other is not. Only want one.
+                patch_actual = patches.Rectangle((0, 0), width=.78, height=.8, angle=0,
+                                                 fc='y', color="red")
 
-        self.animations[ax] = animation.FuncAnimation(self.fig, self.animate,
-                                                      frames=len(delta_times),
-                                                      interval=0,  # FIXME start at 0?
-                                                      fargs=(delta_times, file_data, ax),
-                                                      blit=True, repeat=False)
+                patch_target = patches.Rectangle((0, 0), width=.78, height=.8, angle=0,
+                                                 fc='y', color="blue")
+                self.patches[ax] = [ax.add_patch(patch_actual), ax.add_patch(patch_target)]
+            else:
+                set_visible(self.patches[ax], True)
+                self.animations[ax].event_source.stop()
+
+            self.animations[ax] = animation.FuncAnimation(self.fig, self.animate,
+                                                          frames=len(delta_times),
+                                                          interval=0,  # FIXME start at 0?
+                                                          fargs=(delta_times, file_data, ax),
+                                                          blit=True, repeat=False)
 
 
 def is_valid_log(file):
