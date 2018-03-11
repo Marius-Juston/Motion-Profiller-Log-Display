@@ -65,7 +65,7 @@ def main():
                 coef = find_gain(file_data, is_data=True, plot=ax)
                 plt.show()
 
-                easygui.msgbox("The gain of this log is {0:f}".format(coef))
+                easygui.msgbox("The kV of this log is {0:f}".format(coef))
             else:
                 easygui.msgbox(
                     "The file {0:s} is not a valid file.".format(os.path.basename(file)))
