@@ -1,3 +1,4 @@
+scikit-learn==0.19.1
 matplotlib==2.2.0
 easygui==0.98.1
 numpy==1.14.1

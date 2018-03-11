@@ -1,3 +1,4 @@
+import easygui
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
@@ -6,6 +7,10 @@ from sklearn.externals import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
+
+from driver import is_valid_log
+
+MODEL_FILE_NAME = "model.pkl"
 
 
 def get_features(file_data):
@@ -38,21 +43,42 @@ def plot_hyperplane(clf, min_x, max_x, linestyle, label):
     plt.plot(xx, yy, linestyle, label=label)
 
 
-MODEL_FILE_NAME = "model.pkl"
+import os
 
 
 def main():
+    open_path = "{0:s}\*.csv".format(os.path.expanduser("~"))
+
     fig = plt.figure()
     ax = Axes3D(fig)
+    plt.ion()
 
-    find_gain("./test_data/2018-03-04 03-22-39.csv", plot=ax)
-    plt.show()
-    find_gain("./test_data/2018-02-13 07-57-11.csv", plot=ax)
-    plt.show()
+    while True:
+        file = easygui.fileopenbox('Please locate csv file', 'Specify File', default=open_path, filetypes='*.csv')
+
+        if file:
+            open_path = "{0:s}\*.csv".format(os.path.dirname(file))
+
+            file_data = np.genfromtxt(file, delimiter=',', dtype=np.float32, names=True)
+
+            if is_valid_log(file_data):
+                coef = find_gain(file_data, is_data=True, plot=ax)
+                plt.show()
+
+                easygui.msgbox("The gain of this log is {0:f}".format(coef))
+            else:
+                easygui.msgbox(
+                    "The file {0:s} is not a valid file.".format(os.path.basename(file)))
+
+        else:
+            break
+    plt.ioff()
+    # plt.show()
 
 
-def find_gain(file_name, learn=False, plot=None):
-    file_data = np.genfromtxt(file_name, delimiter=',', dtype=np.float32, names=True)
+def find_gain(file_data, is_data=False, learn=False, plot=None):
+    if not is_data:
+        file_data = np.genfromtxt(file_data, delimiter=',', dtype=np.float32, names=True)
 
     X = get_features(file_data)
 
@@ -95,11 +121,12 @@ def find_gain(file_name, learn=False, plot=None):
             plot.scatter(average, velocity, time, c=predicted)
         else:
             plot.scatter(average, velocity, c=predicted)
+
     return (coef1 + coef2) / 2
 
 
-def find_coefficient(average, velocity):
-    m, b = np.polyfit(average, velocity, 1)
+def find_coefficient(x, y):
+    m, b = np.polyfit(x, y, 1)
 
     return m
 
