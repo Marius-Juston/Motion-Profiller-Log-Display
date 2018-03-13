@@ -82,7 +82,9 @@ def find_constants():
 
     fig = plt.figure()
     ax = Axes3D(fig)
+    clf = joblib.load(MODEL_FILE_NAME)
     plt.ion()
+    plot_hyperplane(clf, ax)
 
     while True:
         file = easygui.fileopenbox('Please locate csv file', 'Specify File', default=open_path, filetypes='*.csv')
@@ -93,7 +95,7 @@ def find_constants():
             file_data = np.genfromtxt(file, delimiter=',', dtype=np.float32, names=True)
 
             if is_valid_log(file_data):
-                coef, intercept = find_gain(file_data, is_data=True, plot=ax)
+                coef, intercept = find_gain(clf,file_data, is_data=True, plot=ax)
                 plt.show()
 
                 easygui.msgbox("The kV of this log is {0:f}.\nThe kC of this log is {1:f}".format(coef, intercept))
@@ -107,7 +109,7 @@ def find_constants():
     # plt.show()
 
 
-def find_gain(file_data, is_data=False, plot=None):
+def find_gain(clf, file_data, is_data=False, plot=None):
     if not is_data:
         file_data = np.genfromtxt(file_data, delimiter=',', dtype=np.float32, names=True)
 
@@ -119,8 +121,6 @@ def find_gain(file_data, is_data=False, plot=None):
     X = X[predicted == 1]
 
     X_scaled = MinMaxScaler().fit_transform(X)
-
-    clf = joblib.load(MODEL_FILE_NAME)
 
     predicted = clf.predict(X_scaled)
 
