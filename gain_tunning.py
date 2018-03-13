@@ -224,9 +224,9 @@ def train_model():
 
                 temp_fig = plt.figure(os.path.basename(file).split(".")[0])
                 temp_ax = Axes3D(temp_fig)
-                ax.set_xlabel('Average motor power')
-                ax.set_ylabel('Velocity')
-                ax.set_zlabel('Time')
+                temp_ax.set_xlabel('Average motor power')
+                temp_ax.set_ylabel('Velocity')
+                temp_ax.set_zlabel('Time')
 
                 outlier_line = temp_ax.scatter(outliers[:, 0], outliers[:, 1], outliers[:, 2], c="black",
                                                label="outliers")
