@@ -80,11 +80,18 @@ def plot_hyperplane(clf, ax):
 def find_constants():
     global open_path
 
+    if not os.path.exists(MODEL_FILE_NAME):
+        easygui.msgbox("There are no models to use to classify the data. Please train algorithm first.")
+        return
+
     fig = plt.figure()
-    ax = Axes3D(fig)
+    ax3d = Axes3D(fig)
+    fig, ax2d = plt.subplots(1, 1)
+
     clf = joblib.load(MODEL_FILE_NAME)
+
     plt.ion()
-    plot_hyperplane(clf, ax)
+    plot_hyperplane(clf, ax3d)
 
     while True:
         file = easygui.fileopenbox('Please locate csv file', 'Specify File', default=open_path, filetypes='*.csv')
@@ -95,7 +102,10 @@ def find_constants():
             file_data = np.genfromtxt(file, delimiter=',', dtype=np.float32, names=True)
 
             if is_valid_log(file_data):
-                coef, intercept = find_gain(clf,file_data, is_data=True, plot=ax)
+                ax2d.cla()
+                ax3d.cla()
+
+                coef, intercept = find_gain(clf, file_data, is_data=True, ax3d=ax3d, ax2d=ax2d)
                 plt.show()
 
                 easygui.msgbox("The kV of this log is {0:f}.\nThe kC of this log is {1:f}".format(coef, intercept))
@@ -107,9 +117,10 @@ def find_constants():
             break
     plt.ioff()
     # plt.show()
+    plt.close()
 
 
-def find_gain(clf, file_data, is_data=False, plot=None):
+def find_gain(clf, file_data, is_data=False, ax3d=None, ax2d=None):
     if not is_data:
         file_data = np.genfromtxt(file_data, delimiter=',', dtype=np.float32, names=True)
 
@@ -129,21 +140,31 @@ def find_gain(clf, file_data, is_data=False, plot=None):
 
     coef1, intercept1 = find_best_fit_line(going_up[:, 0], going_up[:, 1])
     coef2, intercept2 = find_best_fit_line(going_down[:, 0], going_down[:, 1])
+    coef = (coef1 + coef2) / 2
+    intercet = (intercept1 + intercept2) / 2
 
-    if plot:
+    if ax3d or ax2d:
         average = np.hstack(X_scaled[:, 0])
         velocity = np.hstack(X_scaled[:, 1])
-        plot.set_xlabel('Scaled average motor power')
-        plot.set_ylabel('Scaled velocity')
+        if ax3d:
+            ax3d.set_xlabel('Scaled average motor power')
+            ax3d.set_ylabel('Scaled velocity')
 
-        if isinstance(plot, Axes3D):
-            plot.set_zlabel('Scaled Time')
+            ax3d.set_zlabel('Scaled Time')
             time = np.hstack(X_scaled[:, 2])
-            plot.scatter(average, velocity, time, c=predicted)
-        else:
-            plot.scatter(average, velocity, c=predicted)
+            ax3d.scatter(average, velocity, time, c=predicted)
 
-    return (coef1 + coef2) / 2, (intercept1 + intercept2) / 2
+        if ax2d:
+            ax2d.set_xlabel('Scaled average motor power')
+            ax2d.set_ylabel('Scaled velocity')
+            ax2d.scatter(X[:, 0], X[:, 1], c=predicted)
+
+            y_lim = np.array(ax2d.get_ylim())
+
+            for c, i in zip([coef, coef1, coef2], [intercet, intercept1, intercept2]):
+                ax2d.plot((y_lim - i) / c, y_lim)
+
+    return coef, intercet
 
 
 def find_best_fit_line(x, y):
@@ -173,12 +194,16 @@ def train_model():
     if os.path.exists(MODEL_FILE_NAME):
         answer = easygui.boolbox("A model already exists do you wish to use it?")
 
+        if answer is None:
+            return
+
         if answer:
             clf = joblib.load(MODEL_FILE_NAME)
             hyperplane = plot_hyperplane(clf, ax)
             data = np.load(MODEL_DATA_FILE_NAME)
             total_data["features"] = data["features"]
             total_data["labels"] = data["labels"]
+
             positive = total_data["features"][total_data["labels"] == 0]
             negative = total_data["features"][total_data["labels"] == 1]
 
@@ -187,7 +212,6 @@ def train_model():
             negative_line = ax.scatter(negative[:, 0], negative[:, 1], negative[:, 2], c="blue",
                                        label="negative")
 
-            total_data["labels"] = total_data["labels"].reshape((-1, 1))
             plt.show()
         else:
             clf = SVC(random_state=0, kernel="rbf")
@@ -299,6 +323,8 @@ def train_model():
         print("saving model")
         joblib.dump(clf, MODEL_FILE_NAME)
         np.savez(MODEL_DATA_FILE_NAME, features=total_data["features"], labels=total_data["labels"])
+
+    plt.close()
 
 
 def main():
