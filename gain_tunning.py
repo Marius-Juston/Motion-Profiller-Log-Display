@@ -7,6 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
 from skimage import measure
 from sklearn.ensemble import IsolationForest
+from sklearn.exceptions import NotFittedError
 from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
@@ -16,19 +17,24 @@ from driver import is_valid_log
 MODEL_FILE_NAME = "model.pkl"
 MODEL_DATA_FILE_NAME = "data.npz"
 open_path = "{0:s}\*.csv".format(os.path.expanduser("~"))
+ACCELERATING = 0
+DECELERATING = 1
+OUTLIER = -1
 
 
 def get_features(file_data):
-    average_power = (file_data["pLeft"] + file_data["pRight"]) / 2
+    average_power = (file_data["pLeft"] + file_data["pRight"]) / 2.0
 
+    time = file_data["Time"]
     previous_data = np.roll(file_data, 1)
     velocity = np.sqrt(
         (file_data["xActual"] - previous_data["xActual"]) ** 2 + (
-                file_data["yActual"] - previous_data["yActual"]) ** 2) / (file_data["Time"] - previous_data["Time"])
+                file_data["yActual"] - previous_data["yActual"]) ** 2) / (time - previous_data["Time"])
 
-    X = np.concatenate((np.vstack(average_power), np.vstack(velocity), np.vstack(file_data["Time"])), 1)
+    velocity[0] = 0
 
-    return X
+    x = np.concatenate((np.vstack(average_power), np.vstack(velocity), np.vstack(time)), 1)
+    return x
 
 
 def get_labels(file_data):
@@ -44,33 +50,27 @@ def plot_hyperplane(clf, ax):
     interval = .1
     interval = int(1 / interval)
 
-    X_MIN, X_MAX = ax.get_xlim()
-    Y_MIN, Y_MAX = ax.get_ylim()
-    Z_MIN, Z_MAX = ax.get_zlim()
+    x_min, x_max = ax.get_xlim()
+    y_min, y_max = ax.get_ylim()
+    z_min, z_max = ax.get_zlim()
 
     # create grid to evaluate model
-    XX = np.linspace(X_MIN, X_MAX, interval)
-    YY = np.linspace(Y_MIN, Y_MAX, interval)
-    ZZ = np.linspace(Z_MIN, Z_MAX, interval)
-    YY, XX, ZZ = np.meshgrid(YY, XX, ZZ)
+    xx = np.linspace(x_min, x_max, interval)
+    yy = np.linspace(y_min, y_max, interval)
+    zz = np.linspace(z_min, z_max, interval)
+    yy, xx, zz = np.meshgrid(yy, xx, zz)
 
-    # xy = np.vstack([XX.ravel(), YY.ravel(), Z.ravel()]).T
+    z = clf.decision_function(np.c_[xx.ravel(), yy.ravel(), zz.ravel()])
+    z = z.reshape(xx.shape)
 
-    Z = clf.decision_function(np.c_[XX.ravel(), YY.ravel(), ZZ.ravel()])
-    # Z = MinMaxScaler().fit_transform(Z.reshape(-1, 1))
-
-    # w_norm = np.linalg.norm(clf.coef_)
-    # Z = Z / w_norm
-    Z = Z.reshape(XX.shape)
-
-    verts, faces, _, _ = measure.marching_cubes(Z, 0)
+    verteces, faces, _, _ = measure.marching_cubes(z, 0)
     # Scale and transform to actual size of the interesting volume
-    verts = verts * [X_MAX - X_MIN, Y_MAX - Y_MIN, Z_MAX - Z_MIN] / interval
-    verts = verts + [X_MIN, Y_MIN, Z_MIN]
+    verteces = verteces * [x_max - x_min, y_max - y_min, z_max - z_min] / interval
+    verteces = verteces + [x_min, y_min, z_min]
     # and create a mesh to display
-    # mesh = Poly3DCollection(verts[faces],
+    # mesh = Poly3DCollection(verteces[faces],
     #                         facecolor='orange', alpha=0.3)
-    mesh = Line3DCollection(verts[faces],
+    mesh = Line3DCollection(verteces[faces],
                             facecolor='orange', alpha=0.3)
     ax.add_collection3d(mesh)
 
@@ -84,14 +84,17 @@ def find_constants():
         easygui.msgbox("There are no models to use to classify the data. Please train algorithm first.")
         return
 
-    fig = plt.figure()
-    ax3d = Axes3D(fig)
-    fig, ax2d = plt.subplots(1, 1)
-
     clf = joblib.load(MODEL_FILE_NAME)
 
+    if is_empty_model(clf):
+        easygui.msgbox("The model has not been fitted yet. Please add training data to the model.")
+        return
+
+    fig = plt.figure("Scaled 3d data")
+    ax3d = Axes3D(fig)
+    fig, ax2d = plt.subplots(1, 1, num="Fitted data")
+
     plt.ion()
-    plot_hyperplane(clf, ax3d)
 
     while True:
         file = easygui.fileopenbox('Please locate csv file', 'Specify File', default=open_path, filetypes='*.csv')
@@ -105,119 +108,141 @@ def find_constants():
                 ax2d.cla()
                 ax3d.cla()
 
-                coef, intercept = find_gain(clf, file_data, is_data=True, ax3d=ax3d, ax2d=ax2d)
+                plot_hyperplane(clf, ax3d)
+
+                k_v, k_k, k_acc = find_gain(clf, file_data, is_data=True, ax3d=ax3d, ax2d=ax2d)
                 plt.show()
 
-                easygui.msgbox("The kV of this log is {0:f}.\nThe kC of this log is {1:f}".format(coef, intercept))
+                easygui.msgbox("""
+                The kV of this log is {0:f}.
+                The kK of this log is {1:f}.
+                The kAcc of this log is {2:f}.""".format(k_v, k_k, k_acc))
             else:
                 easygui.msgbox(
                     "The file {0:s} is not a valid file.".format(os.path.basename(file)))
 
         else:
             break
+
     plt.ioff()
-    # plt.show()
-    plt.close()
+    plt.close("all")
 
 
 def find_gain(clf, file_data, is_data=False, ax3d=None, ax2d=None):
     if not is_data:
         file_data = np.genfromtxt(file_data, delimiter=',', dtype=np.float32, names=True)
 
-    X = get_features(file_data)
+    x = get_features(file_data)
 
     out = IsolationForest(n_jobs=-1, random_state=0)
-    out.fit(X)
-    predicted = out.predict(X)
-    X = X[predicted == 1]
+    out.fit(x)
+    predicted = out.predict(x)
+    x = x[predicted == 1]
+    x_scaled = MinMaxScaler().fit_transform(x)
+    predicted = clf.predict(x_scaled)
 
-    X_scaled = MinMaxScaler().fit_transform(X)
+    acceleration = x[predicted == 0]
+    average_power_accelerating = acceleration[:, 0]
+    velocity_accelerating = acceleration[:, 1]
 
-    predicted = clf.predict(X_scaled)
+    deceleration = x[predicted == 1]
+    average_power_decelerating = deceleration[:, 0]
+    velocity_decelerating = deceleration[:, 1]
 
-    going_up = X[predicted == 0]
-    going_down = X[predicted == 1]
+    accelerating_coefficient, accelerating_intercept = find_linear_best_fit_line(velocity_accelerating,
+                                                                                 average_power_accelerating)
+    decelerating_coefficient, decelerating_intercept = find_linear_best_fit_line(velocity_decelerating,
+                                                                                 average_power_decelerating)
+    k_v = (accelerating_coefficient + decelerating_coefficient) / 2
+    k_k = (accelerating_intercept + decelerating_intercept) / 2
 
-    coef1, intercept1 = find_best_fit_line(going_up[:, 0], going_up[:, 1])
-    coef2, intercept2 = find_best_fit_line(going_down[:, 0], going_down[:, 1])
-    coef = (coef1 + coef2) / 2
-    intercet = (intercept1 + intercept2) / 2
+    acceleration_coefficient = (accelerating_coefficient - k_v)
+    acceleration_intercept = (accelerating_intercept - k_k)
+    k_acc = ((x[:, 1].max() - x[:, 1].min()) / 2) * acceleration_coefficient + acceleration_intercept
 
     if ax3d or ax2d:
-        average = np.hstack(X_scaled[:, 0])
-        velocity = np.hstack(X_scaled[:, 1])
-        if ax3d:
-            ax3d.set_xlabel('Scaled average motor power')
-            ax3d.set_ylabel('Scaled velocity')
+        colors = ["red" if i == 0 else "blue" for i in predicted]
 
+        if ax3d:
+            ax3d.set_xlabel('Velocity')
+            ax3d.set_ylabel('Average motor power')
             ax3d.set_zlabel('Scaled Time')
-            time = np.hstack(X_scaled[:, 2])
-            ax3d.scatter(average, velocity, time, c=predicted)
+
+            scaled_average_power = np.hstack(x_scaled[:, 1])
+            scaled_velocity = np.hstack(x_scaled[:, 0])
+            time = np.hstack(x_scaled[:, 2])
+            ax3d.scatter(scaled_velocity, scaled_average_power, time, c=colors)
 
         if ax2d:
-            ax2d.set_xlabel('Scaled average motor power')
-            ax2d.set_ylabel('Scaled velocity')
-            ax2d.scatter(X[:, 0], X[:, 1], c=predicted)
+            ax2d.set_xlabel('Velocity')
+            ax2d.set_ylabel('Average motor power')
+            velocity = x[:, 1]
+            average_power = x[:, 0]
+            ax2d.scatter(velocity, average_power, c=colors)
 
             y_lim = np.array(ax2d.get_ylim())
+            # TODO make the lines not exceed the x limit as well
 
-            for c, i in zip([coef, coef1, coef2], [intercet, intercept1, intercept2]):
+            for c, i in zip([k_v, accelerating_coefficient, decelerating_coefficient],
+                            [k_k, accelerating_intercept, decelerating_intercept]):
                 ax2d.plot((y_lim - i) / c, y_lim)
 
-    return coef, intercet
+    return k_v, k_k, k_acc
 
 
-def find_best_fit_line(x, y):
+def find_linear_best_fit_line(x, y):
     m, b = np.polyfit(x, y, 1)
 
     return m, b
+
+
+def create_blank_classifier():
+    return SVC(kernel="rbf", random_state=0)
 
 
 def train_model():
     # TODO add lasso selection of points for data that was not classified manually.
     # TODO Should be able to select outliers and what side is positive or not
     global open_path
-    # clf = SVC(random_state=0, kernel="linear")
-
     fig = plt.figure("Complete classifier")
-    ax = Axes3D(fig)
-    plt.ion()
-    ax.set_xlabel('Average motor power')
-    ax.set_ylabel('Velocity')
-    ax.set_zlabel('Time')
+    ax3d = Axes3D(fig)
+    ax3d.set_xlabel('Average motor power')
+    ax3d.set_ylabel('Velocity')
+    ax3d.set_zlabel('Time')
 
     total_data = {}
     already_used_files = []
     changed_anything = False
     hyperplane = None
 
+    plt.ion()
     if os.path.exists(MODEL_FILE_NAME):
         answer = easygui.boolbox("A model already exists do you wish to use it?")
 
         if answer is None:
             return
 
-        if answer:
+        elif answer:
             clf = joblib.load(MODEL_FILE_NAME)
-            hyperplane = plot_hyperplane(clf, ax)
+            hyperplane = plot_hyperplane(clf, ax3d)
             data = np.load(MODEL_DATA_FILE_NAME)
             total_data["features"] = data["features"]
             total_data["labels"] = data["labels"]
 
-            positive = total_data["features"][total_data["labels"] == 0]
-            negative = total_data["features"][total_data["labels"] == 1]
+            accelerating = total_data["features"][total_data["labels"] == 0]
+            decelerating = total_data["features"][total_data["labels"] == 1]
 
-            positive_line = ax.scatter(positive[:, 0], positive[:, 1], positive[:, 2], c="red",
-                                       label="positive")
-            negative_line = ax.scatter(negative[:, 0], negative[:, 1], negative[:, 2], c="blue",
-                                       label="negative")
+            ax3d.scatter(accelerating[:, 0], accelerating[:, 1], accelerating[:, 2], c="red",
+                         label="acceleration")
+            ax3d.scatter(decelerating[:, 0], decelerating[:, 1], decelerating[:, 2], c="blue",
+                         label="deceleration")
 
             plt.show()
         else:
-            clf = SVC(random_state=0, kernel="rbf")
+            clf = create_blank_classifier()
             changed_anything = True
     else:
-        clf = SVC(random_state=0, kernel="rbf")
+        clf = create_blank_classifier()
 
     while True:
         file = easygui.fileopenbox('Please locate csv file', 'Specify File', default=open_path, filetypes='*.csv')
@@ -228,23 +253,24 @@ def train_model():
             file_data = np.genfromtxt(file, delimiter=',', dtype=np.float32, names=True)
 
             if is_valid_log(file_data):
-                X = get_features(file_data)
-                Y = get_labels(file_data)
-
-                X = MinMaxScaler().fit_transform(X)
+                x = get_features(file_data)
+                y = get_labels(file_data)
 
                 outlier = IsolationForest(n_jobs=-1, random_state=0)
+                outlier.fit(x, y)
+                prediction = outlier.predict(x)
                 # outlier = LocalOutlierFactor(n_jobs=-1, )
                 # outlier = EllipticEnvelope(random_state=0)
-                outlier.fit(X, Y)
-                prediction = outlier.predict(X)
-                # prediction = outlier.fit_predict(X)
+                # prediction = outlier.fit_predict(x)
 
-                Y[prediction == -1] = -1
+                y[prediction == -1] = OUTLIER
 
-                outliers = X[Y == -1]
-                positive = X[Y == 0]
-                negative = X[Y == 1]
+                outliers = x[y == OUTLIER]
+                accelerating = x[y == ACCELERATING]
+                decelerating = x[y == DECELERATING]
+                outlier_power, outlier_velocity, outlier_time = separate_feature(outliers)
+                accelerating_power, accelerating_velocity, accelerating_time = separate_feature(accelerating)
+                decelerating_power, decelerating_velocity, decelerating_time = separate_feature(decelerating)
 
                 temp_fig = plt.figure(os.path.basename(file).split(".")[0])
                 temp_ax = Axes3D(temp_fig)
@@ -252,64 +278,72 @@ def train_model():
                 temp_ax.set_ylabel('Velocity')
                 temp_ax.set_zlabel('Time')
 
-                outlier_line = temp_ax.scatter(outliers[:, 0], outliers[:, 1], outliers[:, 2], c="black",
+                outlier_line = temp_ax.scatter(outlier_power, outlier_velocity, outlier_time, c="black",
                                                label="outliers")
-                positive_line = temp_ax.scatter(positive[:, 0], positive[:, 1], positive[:, 2], c="red",
-                                                label="positive")
-                negative_line = temp_ax.scatter(negative[:, 0], negative[:, 1], negative[:, 2], c="blue",
-                                                label="negative")
+                acceleration_line = temp_ax.scatter(accelerating_power, accelerating_velocity, accelerating_time,
+                                                    c="red",
+                                                    label="accelerating")
+                deceleration_line = temp_ax.scatter(decelerating_power, decelerating_velocity, decelerating_time,
+                                                    c="blue",
+                                                    label="decelerating")
                 plt.show()
 
                 easygui.msgbox("Next without outliers and rescaled")
 
-                X = X[prediction != -1]
-                Y = Y[prediction != -1]
-                X = MinMaxScaler().fit_transform(X)
+                x = x[prediction != OUTLIER]
+                y = y[prediction != OUTLIER]
+                x = MinMaxScaler().fit_transform(x)
 
                 outlier_line.remove()
-                positive_line.remove()
-                negative_line.remove()
+                acceleration_line.remove()
+                deceleration_line.remove()
 
-                positive = X[Y == 0]
-                negative = X[Y == 1]
-                positive_line = temp_ax.scatter(positive[:, 0], positive[:, 1], positive[:, 2], c="red",
-                                                label="positive")
-                negative_line = temp_ax.scatter(negative[:, 0], negative[:, 1], negative[:, 2], c="blue",
-                                                label="negative")
+                accelerating = x[y == ACCELERATING]
+                decelerating = x[y == DECELERATING]
+                accelerating_power, accelerating_velocity, accelerating_time = separate_feature(accelerating)
+                decelerating_power, decelerating_velocity, decelerating_time = separate_feature(decelerating)
 
-                # train, test, train_L, test_L = train_test_split(X, Y, train_size=.8, test_size=.2, random_state=0,
+                acceleration_line = temp_ax.scatter(accelerating_power, accelerating_velocity, accelerating_time,
+                                                    c="red",
+                                                    label="accelerating")
+                deceleration_line = temp_ax.scatter(decelerating_power, decelerating_velocity, decelerating_time,
+                                                    c="blue",
+                                                    label="decelerating")
+
+                # train, test, train_L, test_L = train_test_split(x, y, train_size=.8, test_size=.2, random_state=0,
                 #                                                 shuffle=True)
                 # clf.fit(train, train_L)
 
-                clf.fit(X, Y)
+                clf.fit(x, y)
                 plot_hyperplane(clf, temp_ax)
 
                 if len(total_data) == 0:
-                    total_data = {"features": X, "labels": Y.reshape((-1, 1))}
+                    total_data = {"features": x, "labels": y}
                     changed_anything = True
                 elif file not in already_used_files:
-                    new_x = np.concatenate((total_data["features"], X))
-                    new_y = np.concatenate((total_data["labels"], Y.reshape(-1, 1)))
-                    temp_x = np.hstack((new_x, new_y))
+                    new_x = np.concatenate((total_data["features"], x))
+                    new_y = np.concatenate((total_data["labels"], y))
+                    temp_x = np.hstack((new_x, new_y.reshape((-1, 1))))
                     temp_x = np.unique(temp_x, axis=0)
                     new_x = temp_x[:, :-1]
                     new_y = temp_x[:, -1]
 
                     total_data["features"] = new_x
-                    total_data["labels"] = new_y
+                    total_data["labels"] = new_y.ravel()
 
                     clf.fit(total_data["features"], total_data["labels"])
                     changed_anything = True
+
                 if file not in already_used_files:  # FIXME can this just be in a single if statement?
-                    ax.scatter(positive[:, 0], positive[:, 1], positive[:, 2], c="red",
-                               label="positive")
-                    ax.scatter(negative[:, 0], negative[:, 1], negative[:, 2], c="blue",
-                               label="negative")
+                    ax3d.scatter(accelerating[:, 0], accelerating[:, 1], accelerating[:, 2], c="red",
+                                 label="positive")
+                    ax3d.scatter(decelerating[:, 0], decelerating[:, 1], decelerating[:, 2], c="blue",
+                                 label="negative")
 
                     if hyperplane is not None:
                         hyperplane.remove()
 
-                    hyperplane = plot_hyperplane(clf, ax)
+                    hyperplane = plot_hyperplane(clf, ax3d)
 
                 already_used_files.append(file)
             else:
@@ -319,17 +353,30 @@ def train_model():
         else:
             break
 
-    if changed_anything:
-        print("saving model")
+    if changed_anything and not is_empty_model(clf):
         joblib.dump(clf, MODEL_FILE_NAME)
         np.savez(MODEL_DATA_FILE_NAME, features=total_data["features"], labels=total_data["labels"])
+        easygui.msgbox("Model saved.")
 
-    plt.close()
+    plt.close("all")
+
+
+def separate_feature(x):
+    return x[:, 0], x[:, 1], x[:, 2]
+
+
+def is_empty_model(clf):
+    try:
+        clf.predict([[0, 0, 0]])
+        return False
+    except NotFittedError:
+        return True
 
 
 def main():
     while True:
-        answer = easygui.boolbox("You you wish to train or find constants?", choices=["[T]rain", "[V]iew Constants"])
+        answer = easygui.boolbox("Do you wish to train your model or find constants?",
+                                 choices=["[T]rain", "[V]iew Constants"])
         if answer is None:
             break
         elif answer:
