@@ -203,6 +203,8 @@ def create_blank_classifier():
 def train_model():
     # TODO add lasso selection of points for data that was not classified manually.
     # TODO Should be able to select outliers and what side is positive or not
+
+    # TODO create 2d plots for every dimension and use lasso selection from there
     global open_path
     fig = plt.figure("Complete classifier")
     ax3d = Axes3D(fig)
