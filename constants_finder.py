@@ -12,7 +12,7 @@ from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 
-from driver import is_valid_log
+from log_viewer import is_valid_log
 
 MODEL_FILE_NAME = "model.pkl"
 MODEL_DATA_FILE_NAME = "data.npz"
