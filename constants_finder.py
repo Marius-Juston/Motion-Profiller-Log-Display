@@ -254,18 +254,21 @@ def train_model():
 
             file_data = np.genfromtxt(file, delimiter=',', dtype=np.float32, names=True)
 
+            # TODO make this loop thought the steps as many times as they are number of paths
             if is_valid_log(file_data):
                 x = get_features(file_data)
                 y = get_labels(file_data)
 
                 outlier = IsolationForest(n_jobs=-1, random_state=0)
-                outlier.fit(x, y)
+
+                temp_y = y[y != OUTLIER] = 1
+                outlier.fit(x, temp_y)
                 prediction = outlier.predict(x)
                 # outlier = LocalOutlierFactor(n_jobs=-1, )
                 # outlier = EllipticEnvelope(random_state=0)
                 # prediction = outlier.fit_predict(x)
 
-                y[prediction == -1] = OUTLIER
+                y[prediction == OUTLIER] = OUTLIER
 
                 outliers = x[y == OUTLIER]
                 accelerating = x[y == ACCELERATING]
