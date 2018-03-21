@@ -7,7 +7,7 @@ import numpy as np
 from matplotlib import gridspec, patches, animation
 
 import helper
-from helper import set_visible, DTYPE, is_valid_log
+from helper import set_visible, is_valid_log
 
 plt.rc_context()
 
@@ -212,7 +212,7 @@ def main(open_path):
             csv_files = {}
 
             for file in files:
-                file_data = np.genfromtxt(file, delimiter=',', dtype=DTYPE, names=True)
+                file_data = helper.get_data(file)
 
                 if is_valid_log(file_data):
                     try:

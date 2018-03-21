@@ -15,7 +15,14 @@ open_path = "{0:s}\*.csv".format(os.path.expanduser("~"))
 ACCELERATING = 0
 DECELERATING = 1
 OUTLIER = -1
-DTYPE = tuple("U10" if i == len(COLUMNS) - 1 else np.float32 for i in range(len(COLUMNS)))
+# DTYPE = tuple("U10" if i == len(COLUMNS) - 1 else np.float32 for i in range(len(COLUMNS)))
+DTYPE = None
+ENCODING = None
+DELIMITER = ", "
+
+
+def get_data(file):
+    return np.genfromtxt(file, delimiter=DELIMITER, dtype=DTYPE, names=True, encoding=ENCODING)
 
 
 def is_valid_log(file):

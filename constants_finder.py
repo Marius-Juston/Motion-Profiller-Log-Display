@@ -94,7 +94,7 @@ def find_constants(open_path):
         if file:
             open_path = "{0:s}\*.csv".format(os.path.dirname(file))
 
-            file_data = np.genfromtxt(file, delimiter=',', dtype=DTYPE, names=True)
+            file_data = helper.get_data(file)
 
             if is_valid_log(file_data):
                 ax2d.cla()
@@ -129,7 +129,7 @@ def find_gain(clf, file_data, is_data=False, ax3d=None, ax2d=None):
         file_data = np.genfromtxt(file_data, delimiter=',', dtype=DTYPE, names=True)
 
     x = get_features(file_data)
-    x = x[file_data["motionState"] == ' MOVING']
+    x = x[file_data["motionState"] == 'MOVING']
 
     out = IsolationForest(n_jobs=-1, random_state=0)
     out.fit(x)
@@ -248,15 +248,15 @@ def train_model(open_path):
         if file:
             open_path = "{0:s}\*.csv".format(os.path.dirname(file))
 
-            file_data = np.genfromtxt(file, delimiter=',', dtype=DTYPE, names=True)
+            file_data = helper.get_data(file)
 
             # TODO make this loop thought the steps as many times as they are number of paths
             if is_valid_log(file_data):
                 x = get_features(file_data)
                 y = get_labels(file_data)
 
-                x = x[file_data["motionState"] == ' MOVING']
-                y = y[file_data["motionState"] == ' MOVING']
+                x = x[file_data["motionState"] == 'MOVING']
+                y = y[file_data["motionState"] == 'MOVING']
 
                 outlier = IsolationForest(n_jobs=-1, random_state=0)
 
