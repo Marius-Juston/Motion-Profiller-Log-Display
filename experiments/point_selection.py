@@ -3,7 +3,7 @@ from __future__ import print_function
 import numpy as np
 from matplotlib.path import Path
 
-from tests.LassoSelector3D import LassoSelector3D
+from experiments.LassoSelector3D import LassoSelector3D
 
 
 class SelectFromCollection(object):
