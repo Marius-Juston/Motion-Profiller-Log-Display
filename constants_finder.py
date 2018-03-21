@@ -7,19 +7,13 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
 from skimage import measure
 from sklearn.ensemble import IsolationForest
-from sklearn.exceptions import NotFittedError
 from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 
-from log_viewer import is_valid_log
-
-MODEL_FILE_NAME = "model.pkl"
-MODEL_DATA_FILE_NAME = "data.npz"
-open_path = "{0:s}\*.csv".format(os.path.expanduser("~"))
-ACCELERATING = 0
-DECELERATING = 1
-OUTLIER = -1
+import helper
+from helper import MODEL_FILE_NAME, is_valid_log, DTYPE, OUTLIER, ACCELERATING, DECELERATING, MODEL_DATA_FILE_NAME, \
+    is_empty_model
 
 
 def get_features(file_data):
@@ -77,9 +71,7 @@ def plot_hyperplane(clf, ax):
     return mesh
 
 
-def find_constants():
-    global open_path
-
+def find_constants(open_path):
     if not os.path.exists(MODEL_FILE_NAME):
         easygui.msgbox("There are no models to use to classify the data. Please train algorithm first.")
         return
@@ -102,7 +94,7 @@ def find_constants():
         if file:
             open_path = "{0:s}\*.csv".format(os.path.dirname(file))
 
-            file_data = np.genfromtxt(file, delimiter=',', dtype=np.float32, names=True)
+            file_data = np.genfromtxt(file, delimiter=',', dtype=DTYPE, names=True)
 
             if is_valid_log(file_data):
                 ax2d.cla()
@@ -111,6 +103,9 @@ def find_constants():
                 plot_hyperplane(clf, ax3d)
 
                 k_v, k_k, k_acc = find_gain(clf, file_data, is_data=True, ax3d=ax3d, ax2d=ax2d)
+
+                # TODO ask user to give the max acceleration of the current spline
+                # TODO scale k_acc / ()
                 plt.show()
 
                 easygui.msgbox("""
@@ -126,13 +121,15 @@ def find_constants():
 
     plt.ioff()
     plt.close("all")
+    return open_path
 
 
 def find_gain(clf, file_data, is_data=False, ax3d=None, ax2d=None):
     if not is_data:
-        file_data = np.genfromtxt(file_data, delimiter=',', dtype=np.float32, names=True)
+        file_data = np.genfromtxt(file_data, delimiter=',', dtype=DTYPE, names=True)
 
     x = get_features(file_data)
+    x = x[file_data["motionState"] == ' MOVING']
 
     out = IsolationForest(n_jobs=-1, random_state=0)
     out.fit(x)
@@ -200,12 +197,11 @@ def create_blank_classifier():
     return SVC(kernel="rbf", random_state=0)
 
 
-def train_model():
+def train_model(open_path):
     # TODO add lasso selection of points for data that was not classified manually.
     # TODO Should be able to select outliers and what side is positive or not
 
     # TODO create 2d plots for every dimension and use lasso selection from there
-    global open_path
     fig = plt.figure("Complete classifier")
     ax3d = Axes3D(fig)
     ax3d.set_xlabel('Average motor power')
@@ -252,12 +248,15 @@ def train_model():
         if file:
             open_path = "{0:s}\*.csv".format(os.path.dirname(file))
 
-            file_data = np.genfromtxt(file, delimiter=',', dtype=np.float32, names=True)
+            file_data = np.genfromtxt(file, delimiter=',', dtype=DTYPE, names=True)
 
             # TODO make this loop thought the steps as many times as they are number of paths
             if is_valid_log(file_data):
                 x = get_features(file_data)
                 y = get_labels(file_data)
+
+                x = x[file_data["motionState"] == ' MOVING']
+                y = y[file_data["motionState"] == ' MOVING']
 
                 outlier = IsolationForest(n_jobs=-1, random_state=0)
 
@@ -364,31 +363,24 @@ def train_model():
         easygui.msgbox("Model saved.")
 
     plt.close("all")
+    return open_path
 
 
 def separate_feature(x):
     return x[:, 0], x[:, 1], x[:, 2]
 
 
-def is_empty_model(clf):
-    try:
-        clf.predict([[0, 0, 0]])
-        return False
-    except NotFittedError:
-        return True
-
-
-def main():
+def main(open_path):
     while True:
         answer = easygui.boolbox("Do you wish to train your model or find constants?",
                                  choices=["[T]rain", "[V]iew Constants"])
         if answer is None:
-            break
+            return open_path
         elif answer:
-            train_model()
+            open_path = train_model(open_path)
         else:
-            find_constants()
+            open_path = find_constants(open_path)
 
 
 if __name__ == '__main__':
-    main()
+    main(helper.open_path)

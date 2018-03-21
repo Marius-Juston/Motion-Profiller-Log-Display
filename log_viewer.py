@@ -1,4 +1,3 @@
-import math
 import os
 from datetime import datetime
 
@@ -6,6 +5,9 @@ import easygui
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import gridspec, patches, animation
+
+import helper
+from helper import set_visible, DTYPE, is_valid_log
 
 plt.rc_context()
 
@@ -22,11 +24,6 @@ def get_coordinates_at_center(x_current, y_current, height, width, angle):
     y = y_current - y
 
     return x, y
-
-
-def set_visible(patches, value):
-    for patch in patches:
-        patch.set_visible(value)
 
 
 class AnimationDisplay(object):
@@ -68,7 +65,8 @@ class AnimationDisplay(object):
 
         ax = event.inaxes
 
-        # TODO: Add event for when the event.button == 3 display the graphs associated with the graph clicked on on a new figure
+        # TODO: Add event for when the event.button == 3 display the graphs associated with the g
+        # raph clicked on on a new figure
 
         if ax is not None and ax in self.association and event.dblclick:
             file_data = self.association[ax]
@@ -78,7 +76,9 @@ class AnimationDisplay(object):
             delta_times[-1] = 0
 
             if ax not in self.patches:
-                # TODO fix bug where there are two patches on the animation. One is moving the other is not. Only want one.
+                # TODO fix bug where there are two patches on the animation. One is moving
+                #  the other is not. Only want one.
+
                 patch_actual = patches.Rectangle((0, 0), width=.78, height=.8, angle=0,
                                                  fc='y', color="red")
 
@@ -94,15 +94,6 @@ class AnimationDisplay(object):
                                                           interval=0,  # FIXME start at 0?
                                                           fargs=(delta_times, file_data, ax),
                                                           blit=True, repeat=False)
-
-
-def is_valid_log(file):
-    fields = file.dtype.fields.keys()
-
-    return all(key in fields for key in (
-        "Time", "xActual", "yActual", "angleActual", "xTarget", "yTarget", "angleTarget", "XTE", "lagE", "angleE",
-        "pLeft",
-        "pRight"))
 
 
 def sort_files(csv_files):
@@ -133,18 +124,6 @@ def get_axis(grid_spec, fig, index):
     powers = fig.add_subplot(grid_spec[-1, index * 2 + 1])
 
     return path, errors, powers
-
-
-def find_largest_factor(x):
-    i = math.ceil(math.sqrt(x))
-    while i >= 1:
-        if x % i == 0:
-            break
-        i -= 1
-    if x / i > x * (3 / 4):
-        i = round(x / (3 * 4))
-
-    return int(i)
 
 
 def plot_graphs(csv_files):
@@ -198,20 +177,22 @@ def plot_graphs(csv_files):
         #     path.arrow(current_file["xActual"][index], current_file["yActual"][index], y, x, fc="k", ec="k",
         #                head_width=0.05, head_length=0.1)
 
-        errors.plot(current_file["XTE"], c="r", label="Cross Track Error")
-        errors.plot(current_file["lagE"], c="g", label="Lag Error")
-        errors.plot(current_file["angleE"], c="b", label="Angle Error")
+        errors.plot(current_file["Time"], current_file["XTE"], c="r", label="Cross Track Error")
+        errors.plot(current_file["Time"], current_file["lagE"], c="g", label="Lag Error")
+        errors.plot(current_file["Time"], current_file["angleE"], c="b", label="Angle Error")
         errors.grid(True)
         handles, labels = errors.get_legend_handles_labels()
         errors.legend(handles, labels)
-        errors.set_xlim(0)
+        # errors.set_xlim(0)
 
-        powers.plot(current_file["pLeft"], c="r", label="Left Power")
-        powers.plot(current_file["pRight"], c="b", label="Right Power")
+        powers.plot(current_file["Time"], current_file["pLeft"], c="r", label="Left Power")
+        powers.plot(current_file["Time"], current_file["pRight"], c="b", label="Right Power")
         powers.grid(True)
         handles, labels = powers.get_legend_handles_labels()
         powers.legend(handles, labels)
-        powers.set_xlim(0)
+        # powers.set_xlim(0)
+
+        # TODO look at the velocities over time
 
     gs.tight_layout(fig)
 
@@ -220,12 +201,8 @@ def plot_graphs(csv_files):
     plt.show()
 
 
-def main():
-    open_path = "{0:s}\*.csv".format(os.path.expanduser("~"))
-
+def main(open_path):
     while True:
-        # print(open_path)
-
         files = easygui.fileopenbox('Please locate csv files', 'Specify File', default=open_path, filetypes='*.csv',
                                     multiple=True)
 
@@ -235,7 +212,7 @@ def main():
             csv_files = {}
 
             for file in files:
-                file_data = np.genfromtxt(file, delimiter=',', dtype=np.float32, names=True)
+                file_data = np.genfromtxt(file, delimiter=',', dtype=DTYPE, names=True)
 
                 if is_valid_log(file_data):
                     try:
@@ -250,8 +227,8 @@ def main():
             plot_graphs(csv_files)
 
         else:
-            break
+            return open_path
 
 
 if __name__ == '__main__':
-    main()
+    main(helper.open_path)
