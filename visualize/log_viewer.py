@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import gridspec, patches, animation
 
-import helper
-from helper import set_visible, is_valid_log
+from visualize import helper
+from visualize.helper import set_visible, is_valid_log
 
 plt.rc_context()
 

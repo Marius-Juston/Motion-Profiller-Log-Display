@@ -1,8 +1,7 @@
 import easygui
 
-import constants_finder
-import log_viewer
-from helper import open_path
+from visualize import constants_finder, log_viewer
+from visualize import open_path
 
 if __name__ == '__main__':
     while True:

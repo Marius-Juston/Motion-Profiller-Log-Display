@@ -1,5 +1,3 @@
-import os
-
 import easygui
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,9 +9,9 @@ from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 
-import helper
-from helper import MODEL_FILE_NAME, is_valid_log, DTYPE, OUTLIER, ACCELERATING, DECELERATING, MODEL_DATA_FILE_NAME, \
-    is_empty_model
+from visualize import *
+from visualize import helper
+from visualize.helper import is_empty_model, is_valid_log
 
 
 def get_features(file_data):
