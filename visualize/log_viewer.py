@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import gridspec, patches, animation
 
-from visualize import helper
-from visualize.helper import set_visible, is_valid_log
+import visualize
+from visualize.helper import set_visible, is_valid_log, get_data
 
 plt.rc_context()
 
@@ -212,7 +212,7 @@ def main(open_path):
             csv_files = {}
 
             for file in files:
-                file_data = helper.get_data(file)
+                file_data = get_data(file)
 
                 if is_valid_log(file_data):
                     try:
@@ -231,4 +231,4 @@ def main(open_path):
 
 
 if __name__ == '__main__':
-    main(helper.open_path)
+    main(visualize.open_path)

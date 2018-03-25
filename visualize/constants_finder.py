@@ -1,3 +1,5 @@
+import os
+
 import easygui
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,9 +11,9 @@ from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 
-from visualize import *
-from visualize import helper
-from visualize.helper import is_empty_model, is_valid_log
+import visualize
+from visualize import MODEL_FILE_NAME, MODEL_DATA_FILE_NAME, DTYPE, OUTLIER, ACCELERATING, DECELERATING
+from visualize.helper import is_empty_model, is_valid_log, get_data
 
 
 def get_features(file_data):
@@ -92,7 +94,7 @@ def find_constants(open_path):
         if file:
             open_path = "{0:s}\*.csv".format(os.path.dirname(file))
 
-            file_data = helper.get_data(file)
+            file_data = get_data(file)
 
             if is_valid_log(file_data):
                 ax2d.cla()
@@ -246,7 +248,7 @@ def train_model(open_path):
         if file:
             open_path = "{0:s}\*.csv".format(os.path.dirname(file))
 
-            file_data = helper.get_data(file)
+            file_data = get_data(file)
 
             # TODO make this loop thought the steps as many times as they are number of paths
             if is_valid_log(file_data):
@@ -381,4 +383,4 @@ def main(open_path):
 
 
 if __name__ == '__main__':
-    main(helper.open_path)
+    main(visualize.open_path)
