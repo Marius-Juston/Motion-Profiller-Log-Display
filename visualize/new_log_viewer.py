@@ -66,7 +66,6 @@ class Plot(object):
 
     def next_figure(self, increment):
         new_plot_index = max(min((self.current_plot_index + increment), (len(self.sorted_names) - 1)), 0)
-        print(new_plot_index)
 
         if new_plot_index != self.current_plot_index:
             self.fig.clear()  # FIXME Should the figure be cleared should the buttons be removed and the data changed?
@@ -98,7 +97,6 @@ class Plot(object):
         self.next_figure(1)
 
     def previous_plot(self):
-        print("Hello")
         self.next_figure(-1)
 
     def plot_index(self, plot_index):
