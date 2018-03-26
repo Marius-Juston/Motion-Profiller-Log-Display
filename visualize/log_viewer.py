@@ -7,7 +7,7 @@ import numpy as np
 from matplotlib import gridspec, patches, animation
 
 import visualize
-from visualize.helper import set_visible, is_valid_log, get_data
+from visualize.helper import set_visible, is_valid_log, get_data, sort_files
 
 plt.rc_context()
 
@@ -94,28 +94,6 @@ class AnimationDisplay(object):
                                                           interval=0,  # FIXME start at 0?
                                                           fargs=(delta_times, file_data, ax),
                                                           blit=True, repeat=False)
-
-
-def sort_files(csv_files):
-    """
-    Returns a sorted list of keys. The dates will be sorted first and with latest first then
-    the non date objects are added and sorted alphabetically
-    :param csv_files: the dictionary to have the keys sorted
-    :return: a list with the keys for the dictionary sorted
-    """
-    rest = []
-    result = []
-
-    for file in csv_files.keys():
-        if isinstance(file, datetime):
-            result.append(file)
-        else:
-            rest.append(file)
-
-    result = sorted(result, reverse=True)
-    result.extend(sorted(rest))
-
-    return result
 
 
 def get_axis(grid_spec, fig, index):
