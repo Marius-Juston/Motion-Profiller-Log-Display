@@ -3,11 +3,13 @@ from datetime import datetime
 
 import easygui
 import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib import animation, patches
 from matplotlib.gridspec import GridSpec
 from matplotlib.widgets import Button
 
 import visualize
-from visualize.helper import get_data, is_valid_log, sort_files, get_velocity
+from visualize.helper import get_data, is_valid_log, sort_files, get_velocity, get_coordinates_at_center
 
 
 class Plot(object):
@@ -34,6 +36,7 @@ class Plot(object):
         self.grid = GridSpec(self.grid_rows, self.grid_column)
 
         self.current_plot_index = 0
+        self.animation = None
         self.plot_index(self.current_plot_index)
 
     def handle_key_event(self, event):
@@ -44,15 +47,20 @@ class Plot(object):
 
     def create_axis(self):  # TODO should this only be done one?
         paths = self.fig.add_subplot(self.grid[:3, :3])
+        paths.grid(True)
+
         velocities = self.fig.add_subplot(self.grid[0, 3:])
         velocities.set_xlabel("Time (sec)")
         velocities.set_ylabel("Velocity m/s")
+        velocities.grid(True)
 
         errors = self.fig.add_subplot(self.grid[1, 3:])
         errors.set_xlabel("Time (sec)")
+        errors.grid(True)
 
         powers = self.fig.add_subplot(self.grid[2, 3:])
         powers.set_xlabel("Time (sec)")
+        powers.grid(True)
 
         return paths, velocities, errors, powers
 
@@ -109,6 +117,10 @@ class Plot(object):
         self.view_subplot_legends(paths, velocities, errors, powers)
         self.distinguish_paths(current_file, velocities, errors, powers)
 
+        if self.animation is not None:
+            self.animation.stop_animation()
+
+        self.animation = RobotMovement(paths, current_file)
         plt.draw()
 
     def show(self):
@@ -185,6 +197,79 @@ class Plot(object):
         for plot in args:
             for i in range(1, len(max_mins)):
                 plot.axvspan(max_mins[i - 1], max_mins[i], facecolor=colors[i % len(colors)], alpha=0.1)
+
+
+class RobotMovement(object):
+    def __init__(self, ax, data):
+        self.ax = ax
+        ax.figure.canvas.callbacks.connect('button_press_event', self)
+
+        self.time = data["Time"]
+        self.delta_times = self.time
+        self.delta_times = np.roll(self.delta_times, -1, 0) - self.delta_times
+        self.delta_times[-1] = 0
+
+        self.data = {"actual": (data["xActual"], data["yActual"], data["angleActual"]),
+                     "target": (data["xTarget"], data["yTarget"], data["angleTarget"])}
+        self.patches = []
+
+    def set_interval(self, time):
+        """
+        :param time: Time in seconds
+        :return:
+        """
+        self.animation.event_source.interval = time * 1000
+
+    def animate(self, i):
+        # FIXME minimal issue of knowing what time delay to use. Time difference is unnoticeable only minor issue
+        self.set_interval(self.delta_times[i])
+        self.set_patch_location(i)
+
+        if i == self.delta_times.shape[0] - 1:
+            self.set_patch_visibility(False)
+        return self.patches
+
+    def set_patch_location(self, i):
+        for patch, key in zip(self.patches, ("actual", "target")):
+            x, y, angle = self.data[key]
+
+            patch.set_xy(
+                get_coordinates_at_center(x[i], y[i], patch.get_height(),
+                                          patch.get_width(), patch.angle))
+            patch.angle = np.rad2deg(angle[i])
+
+    def create_patches(self):
+        patch_actual = patches.Rectangle((0, 0), width=.78, height=.8, angle=0,
+                                         fc='y', color="red")
+
+        patch_target = patches.Rectangle((0, 0), width=.78, height=.8, angle=0,
+                                         fc='y', color="blue")
+        self.patches = [self.ax.add_patch(patch_actual), self.ax.add_patch(patch_target)]
+
+        self.set_patch_location(0)
+
+        return self.patches
+
+    def set_patch_visibility(self, is_visible):
+        for patch in self.patches:
+            patch.set_visible(is_visible)
+
+    def stop_animation(self):
+        if len(self.patches) != 0:
+            self.set_patch_visibility(False)
+            self.animation.event_source.stop()
+
+    def __call__(self, event):
+        ax = event.inaxes
+
+        if event.dblclick and ax is not None and ax == self.ax:
+            self.stop_animation()
+            self.animation = animation.FuncAnimation(self.ax.figure, self.animate,
+                                                     init_func=self.create_patches,
+                                                     frames=self.delta_times.shape[0],
+                                                     interval=0,
+                                                     blit=True,
+                                                     repeat=False)
 
 
 def main(open_path):
