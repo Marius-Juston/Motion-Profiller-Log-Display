@@ -23,6 +23,29 @@ def get_velocity(file_data):
     return velocity
 
 
+def get_acceleration(time, velocity):
+    previous_velocity = np.roll(velocity, 1)
+    previous_time = np.roll(time, 1)
+    acceleration = (velocity - previous_velocity) / (time - previous_time)
+    acceleration[0] = 0
+
+    return acceleration
+
+
+def get_coordinates_at_center(x_current, y_current, height, width, angle):
+    angle = np.math.atan2((height / 2), (width / 2)) + np.deg2rad(angle)
+
+    d = np.sqrt((width / 2) ** 2 + (height / 2) ** 2)
+    sin = np.cos(angle)
+    x = ((d * sin) if sin != 0 else 0)
+    x = x_current - x
+    cos = np.sin(angle)
+    y = ((d * cos) if cos != 0 else 0)
+    y = y_current - y
+
+    return x, y
+
+
 def is_valid_log(file):
     fields = file.dtype.fields.keys()
 
