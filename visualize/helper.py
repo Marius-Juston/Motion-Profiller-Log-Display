@@ -11,12 +11,17 @@ def get_data(file):
     return np.genfromtxt(file, delimiter=DELIMITER, dtype=DTYPE, names=True, encoding=ENCODING)
 
 
-def get_velocity(file_data):
-    time = file_data["Time"]
+def get_velocity(time, file_data, actual=True):
     previous_data = np.roll(file_data, 1)
-    velocity = np.sqrt(
-        (file_data["xActual"] - previous_data["xActual"]) ** 2 + (
-                file_data["yActual"] - previous_data["yActual"]) ** 2) / (time - previous_data["Time"])
+
+    if actual:
+        velocity = np.sqrt(
+            (file_data["xActual"] - previous_data["xActual"]) ** 2 + (
+                    file_data["yActual"] - previous_data["yActual"]) ** 2) / (time - previous_data["Time"])
+    else:
+        velocity = np.sqrt(
+            (file_data["xTarget"] - previous_data["xTarget"]) ** 2 + (
+                    file_data["yTarget"] - previous_data["yTarget"]) ** 2) / (time - previous_data["Time"])
 
     velocity[0] = 0
 
