@@ -206,7 +206,7 @@ class Plot(object):
             max_y_center = y_center
             max_range = range_1
 
-        max_range += (.8 * 2)
+        max_range += (max(self.robot_height, self.robot_width) * 2.5)
 
         paths.set_xlim(max_x_center - (max_range / 2), max_x_center + (max_range / 2))
         paths.set_ylim(max_y_center - (max_range / 2), max_y_center + (max_range / 2))
