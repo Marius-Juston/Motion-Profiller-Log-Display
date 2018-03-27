@@ -12,6 +12,11 @@ import visualize
 from visualize.helper import get_data, is_valid_log, sort_files, get_velocity, get_coordinates_at_center
 
 
+# TODO add a slider so that you can interactively zoom through time.
+# TODO start button or some other mechanism to continue animation from current slider position
+# TODO make system more efficient by creating the axis only once and setting the data on the graphs only instead
+# TODO show a bar in the smaller graphs to show where it is in time right now
+# TODO make 'h' button popup key shortcuts
 class Plot(object):
 
     def __init__(self, files, show_buttons=False, robot_width=.78, robot_height=.8) -> None:
@@ -211,8 +216,8 @@ class Plot(object):
         paths.set_xlim(max_x_center - (max_range / 2), max_x_center + (max_range / 2))
         paths.set_ylim(max_y_center - (max_range / 2), max_y_center + (max_range / 2))
 
-        paths.plot(x_target, y_target, c="blue", label="Target path")
         paths.plot(x_actual, y_actual, c="red", label="Actual path")
+        paths.plot(x_target, y_target, c="blue", label="Target path")
 
     def distinguish_paths(self, current_file, *args):
         max_mins = [0]
@@ -232,7 +237,8 @@ class Plot(object):
 
 
 class RobotMovement(object):
-    def __init__(self, ax, data, robot_width=.78, robot_height=.8):
+    def __init__(self, ax, data, start_index=0, robot_width=.78, robot_height=.8):
+        self.start_index = start_index
         self.robot_height = robot_height
         self.robot_width = robot_width
         self.ax = ax
@@ -256,6 +262,8 @@ class RobotMovement(object):
 
     def animate(self, i):
         # FIXME minimal issue of knowing what time delay to use. Time difference is unnoticeable only minor issue
+        i += self.start_index
+
         self.set_interval(self.delta_times[i])
         self.set_patch_location(i)
 
@@ -290,20 +298,24 @@ class RobotMovement(object):
 
     def stop_animation(self):
         if len(self.patches) != 0:
-            self.set_patch_visibility(False)
             self.animation.event_source.stop()
+            self.set_patch_visibility(False)
 
     def __call__(self, event):
         ax = event.inaxes
 
-        if event.dblclick and ax is not None and ax == self.ax:
-            self.stop_animation()
-            self.animation = animation.FuncAnimation(self.ax.figure, self.animate,
-                                                     init_func=self.create_patches,
-                                                     frames=self.delta_times.shape[0],
-                                                     interval=0,
-                                                     blit=True,
-                                                     repeat=False)
+        if ax is not None and ax == self.ax:
+
+            if event.dblclick:
+                self.stop_animation()
+                self.animation = animation.FuncAnimation(self.ax.figure, self.animate,
+                                                         init_func=self.create_patches,
+                                                         frames=self.delta_times.shape[0] - self.start_index,
+                                                         interval=0,
+                                                         blit=True,
+                                                         repeat=False)
+            else:
+                self.stop_animation()
 
 
 def main(open_path):
