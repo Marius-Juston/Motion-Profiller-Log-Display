@@ -14,8 +14,11 @@ from visualize.helper import get_data, is_valid_log, sort_files, get_velocity, g
 
 class Plot(object):
 
-    def __init__(self, files) -> None:
+    def __init__(self, files, show_buttons=False, robot_width=.78, robot_height=.8) -> None:
         super().__init__()
+        self.robot_width = robot_width
+        self.robot_height = robot_height
+        self.show_buttons = show_buttons
         self.files = files
         self.sorted_names = sort_files(files)
 
@@ -26,7 +29,7 @@ class Plot(object):
         fig_manager = plt.get_current_fig_manager()
         fig_manager.window.showMaximized()
 
-        if len(files) == 1:
+        if len(files) == 1 or not show_buttons:
             self.grid_rows = 3
             self.grid_column = 6
         else:
@@ -75,7 +78,7 @@ class Plot(object):
 
     def create_buttons(self, plot_index):
         # FIXME make the button actually be able to be pressed (ome reason it does not work)
-        if len(self.sorted_names) > 1:
+        if len(self.sorted_names) > 1 and self.show_buttons:
             if plot_index == 0:
                 next_button_axis = self.fig.add_subplot(self.grid[self.grid_rows - 1, :])
                 next_button = Button(next_button_axis, self.sorted_names[plot_index + 1])
@@ -118,7 +121,8 @@ class Plot(object):
         if self.animation is not None:
             self.animation.stop_animation()
 
-        self.animation = RobotMovement(paths, current_file)
+        self.animation = RobotMovement(paths, current_file, robot_width=self.robot_width,
+                                       robot_height=self.robot_height)
         plt.draw()
 
     def show(self):
@@ -163,19 +167,49 @@ class Plot(object):
         time = current_file["Time"]
         time -= time.min()
 
-        velocity = get_velocity(current_file)
+        actual_velocity = get_velocity(time, current_file)
+        target_velocity = get_velocity(time, current_file, actual=False)
 
         # plt.text(.94, .92, "Max: {0:.4f}".format(velocity.max()), ha='center', va='center',
         #          transform=velocities.transAxes)
-        velocities.plot(time, velocity, c="blue", label="Max: {0:.4f}".format(velocity.max()))
+        velocities.plot(time, actual_velocity, c="red", label="Actual max: {0:.4f}".format(actual_velocity.max()))
+        velocities.plot(time, target_velocity, c="blue",
+                        label="Target max: {0:.4f}".format(target_velocity.max()))
         velocities.set_xlim(0, time.max())
+
+    def get_range_median(self, data):
+        min_value = data.min()
+        max_value = data.max()
+        data_range = max_value - min_value
+        return data_range, (max_value + min_value) / 2
 
     def place_path(self, paths, current_file):
         x_target = current_file["xTarget"]
+        max_range, max_x_center = self.get_range_median(x_target)
+
         y_target = current_file["yTarget"]
+        range_1, max_y_center = self.get_range_median(y_target)
+        max_range = max(max_range, range_1)
 
         x_actual = current_file["xActual"]
+
+        range_1, x_center = self.get_range_median(x_actual)
+
+        if max_range < range_1:
+            max_x_center = x_center
+            max_range = range_1
+
         y_actual = current_file["yActual"]
+        range_1, y_center = self.get_range_median(y_actual)
+
+        if max_range < range_1:
+            max_y_center = y_center
+            max_range = range_1
+
+        max_range += (.8 * 2)
+
+        paths.set_xlim(max_x_center - (max_range / 2), max_x_center + (max_range / 2))
+        paths.set_ylim(max_y_center - (max_range / 2), max_y_center + (max_range / 2))
 
         paths.plot(x_target, y_target, c="blue", label="Target path")
         paths.plot(x_actual, y_actual, c="red", label="Actual path")
@@ -198,7 +232,9 @@ class Plot(object):
 
 
 class RobotMovement(object):
-    def __init__(self, ax, data):
+    def __init__(self, ax, data, robot_width=.78, robot_height=.8):
+        self.robot_height = robot_height
+        self.robot_width = robot_width
         self.ax = ax
         ax.figure.canvas.callbacks.connect('button_press_event', self)
 
@@ -237,7 +273,7 @@ class RobotMovement(object):
             patch.angle = np.rad2deg(angle[i])
 
     def create_patches(self):
-        patch_actual = patches.Rectangle((0, 0), width=.78, height=.8, angle=0,
+        patch_actual = patches.Rectangle((0, 0), width=self.robot_width, height=self.robot_height, angle=0,
                                          fc='y', color="red")
 
         patch_target = patches.Rectangle((0, 0), width=.78, height=.8, angle=0,
