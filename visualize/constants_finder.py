@@ -4,16 +4,14 @@ import easygui
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
-from mpl_toolkits.mplot3d.art3d import Line3DCollection
-from skimage import measure
 from sklearn.ensemble import IsolationForest
 from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 
 import visualize
-from visualize import MODEL_FILE_NAME, MODEL_DATA_FILE_NAME, DTYPE, OUTLIER, ACCELERATING, DECELERATING
-from visualize.helper import is_empty_model, is_valid_log, get_data
+from visualize import MODEL_FILE, MODEL_DATA_FILE, DTYPE, OUTLIER, ACCELERATING, DECELERATING
+from visualize.helper import is_empty_model, is_valid_log, get_data, plot_hyperplane
 
 
 def get_features(file_data):
@@ -39,44 +37,12 @@ def has_classification(file_data):
     return "classification" in file_data.dtype.fields
 
 
-def plot_hyperplane(clf, ax):
-    # get the separating hyperplane
-    interval = .1
-    interval = int(1 / interval)
-
-    x_min, x_max = ax.get_xlim()
-    y_min, y_max = ax.get_ylim()
-    z_min, z_max = ax.get_zlim()
-
-    # create grid to evaluate model
-    xx = np.linspace(x_min, x_max, interval)
-    yy = np.linspace(y_min, y_max, interval)
-    zz = np.linspace(z_min, z_max, interval)
-    yy, xx, zz = np.meshgrid(yy, xx, zz)
-
-    z = clf.decision_function(np.c_[xx.ravel(), yy.ravel(), zz.ravel()])
-    z = z.reshape(xx.shape)
-
-    verteces, faces, _, _ = measure.marching_cubes(z, 0)
-    # Scale and transform to actual size of the interesting volume
-    verteces = verteces * [x_max - x_min, y_max - y_min, z_max - z_min] / interval
-    verteces = verteces + [x_min, y_min, z_min]
-    # and create a mesh to display
-    # mesh = Poly3DCollection(verteces[faces],
-    #                         facecolor='orange', alpha=0.3)
-    mesh = Line3DCollection(verteces[faces],
-                            facecolor='orange', alpha=0.3)
-    ax.add_collection3d(mesh)
-
-    return mesh
-
-
 def find_constants(open_path):
-    if not os.path.exists(MODEL_FILE_NAME):
+    if not os.path.exists(MODEL_FILE):
         easygui.msgbox("There are no models to use to classify the data. Please train algorithm first.")
         return
 
-    clf = joblib.load(MODEL_FILE_NAME)
+    clf = joblib.load(MODEL_FILE)
 
     if is_empty_model(clf):
         easygui.msgbox("The model has not been fitted yet. Please add training data to the model.")
@@ -214,16 +180,16 @@ def train_model(open_path):
     hyperplane = None
 
     plt.ion()
-    if os.path.exists(MODEL_FILE_NAME):
+    if os.path.exists(MODEL_FILE):
         answer = easygui.boolbox("A model already exists do you wish to use it?")
 
         if answer is None:
             return
 
         elif answer:
-            clf = joblib.load(MODEL_FILE_NAME)
+            clf = joblib.load(MODEL_FILE)
             hyperplane = plot_hyperplane(clf, ax3d)
-            data = np.load(MODEL_DATA_FILE_NAME)
+            data = np.load(MODEL_DATA_FILE)
             total_data["features"] = data["features"]
             total_data["labels"] = data["labels"]
 
@@ -358,8 +324,8 @@ def train_model(open_path):
             break
 
     if changed_anything and not is_empty_model(clf):
-        joblib.dump(clf, MODEL_FILE_NAME)
-        np.savez(MODEL_DATA_FILE_NAME, features=total_data["features"], labels=total_data["labels"])
+        joblib.dump(clf, MODEL_FILE)
+        np.savez(MODEL_DATA_FILE, features=total_data["features"], labels=total_data["labels"])
         easygui.msgbox("Model saved.")
 
     plt.close("all")

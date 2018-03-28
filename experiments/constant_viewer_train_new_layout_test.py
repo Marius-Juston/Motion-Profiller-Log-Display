@@ -1,27 +1,15 @@
 import matplotlib.pyplot as plt
-
-# fig = plt.figure("Path")
-# path = fig.gca()
-#
-# fig = plt.figure("Numbers")
-# errors, powers, velocity = fig.subplots(3)
-# plt.show()
 from matplotlib.gridspec import GridSpec
-from matplotlib.widgets import Slider
+from mpl_toolkits.mplot3d import Axes3D
 
 fig = plt.figure()
-gs = GridSpec(4, 6, fig)
-path = fig.add_subplot(gs[:3, :3])
-velocity = fig.add_subplot(gs[0, 3:])
-errors = fig.add_subplot(gs[1, 3:])
-powers = fig.add_subplot(gs[2, 3:])
+gs = GridSpec(3, 4, fig)
 
-slider = Slider(fig.add_subplot(gs[3, :]), "Hello", 0, 1)
-
-# previous_plot = fig.add_subplot(gs[3, :3])
-# prev_button = Button(previous_plot, "Previous")
-# next_plot = fig.add_subplot(gs[3, 3:])
-# next_button = Button(next_plot, "Next")
+# Axes3D()
+master_plot = fig.add_subplot(gs[:3, :3], projection='3d')
+time_velocity = fig.add_subplot(gs[0, -1])
+time_power = fig.add_subplot(gs[1, -1])
+power_velocity = fig.add_subplot(gs[2, -1])
 
 gs.tight_layout(fig)
 

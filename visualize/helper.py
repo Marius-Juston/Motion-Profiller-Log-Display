@@ -2,6 +2,8 @@ import math
 from datetime import datetime
 
 import numpy as np
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
+from skimage import measure
 from sklearn.exceptions import NotFittedError
 
 from visualize import DELIMITER, DTYPE, ENCODING, COLUMNS
@@ -9,6 +11,38 @@ from visualize import DELIMITER, DTYPE, ENCODING, COLUMNS
 
 def get_data(file):
     return np.genfromtxt(file, delimiter=DELIMITER, dtype=DTYPE, names=True, encoding=ENCODING)
+
+
+def plot_hyperplane(clf, ax):
+    # get the separating hyperplane
+    interval = .1
+    interval = int(1 / interval)
+
+    x_min, x_max = ax.get_xlim()
+    y_min, y_max = ax.get_ylim()
+    z_min, z_max = ax.get_zlim()
+
+    # create grid to evaluate model
+    xx = np.linspace(x_min, x_max, interval)
+    yy = np.linspace(y_min, y_max, interval)
+    zz = np.linspace(z_min, z_max, interval)
+    yy, xx, zz = np.meshgrid(yy, xx, zz)
+
+    z = clf.decision_function(np.c_[xx.ravel(), yy.ravel(), zz.ravel()])
+    z = z.reshape(xx.shape)
+
+    verteces, faces, _, _ = measure.marching_cubes(z, 0)
+    # Scale and transform to actual size of the interesting volume
+    verteces = verteces * [x_max - x_min, y_max - y_min, z_max - z_min] / interval
+    verteces = verteces + [x_min, y_min, z_min]
+    # and create a mesh to display
+    # mesh = Poly3DCollection(verteces[faces],
+    #                         facecolor='orange', alpha=0.3)
+    mesh = Line3DCollection(verteces[faces],
+                            facecolor='orange', alpha=0.3)
+    ax.add_collection3d(mesh)
+
+    return mesh
 
 
 def get_velocity(time, file_data, actual=True):
