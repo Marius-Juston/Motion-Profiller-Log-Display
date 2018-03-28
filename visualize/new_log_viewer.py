@@ -19,7 +19,7 @@ from visualize.helper import get_data, is_valid_log, sort_files, get_velocity, g
 # TODO make 'h' button popup key shortcuts
 class Plot(object):
 
-    def __init__(self, files, show_buttons=False, robot_width=.78, robot_height=.8) -> None:
+    def __init__(self, files, show_buttons=True, robot_width=.78, robot_height=.8) -> None:
         super().__init__()
         self.robot_width = robot_width
         self.robot_height = robot_height
@@ -43,9 +43,16 @@ class Plot(object):
 
         self.grid = GridSpec(self.grid_rows, self.grid_column)
 
+        self.buttons_axes = []
+        self.animations = {}
         self.current_plot_index = 0
-        self.animation = None
+        # self.animation = None
+        self.create_axis()
         self.plot_index(self.current_plot_index)
+
+    def clear_buttons(self):
+        while len(self.buttons_axes) != 0:
+            self.buttons_axes.pop().remove()
 
     def handle_key_event(self, event):
         if event.key == "right":
@@ -54,30 +61,26 @@ class Plot(object):
             self.next_figure(-1)
 
     def create_axis(self):  # TODO should this only be done one?
-        paths = self.fig.add_subplot(self.grid[:3, :3])
-        paths.grid(True)
+        self.paths = self.fig.add_subplot(self.grid[:3, :3])
 
-        velocities = self.fig.add_subplot(self.grid[0, 3:])
-        velocities.set_xlabel("Time (sec)")
-        velocities.set_ylabel("Velocity m/s")
-        velocities.grid(True)
+        self.velocities = self.fig.add_subplot(self.grid[0, 3:])
+        self.velocities.set_xlabel("Time (sec)")
+        self.velocities.set_ylabel("Velocity m/s")
 
-        errors = self.fig.add_subplot(self.grid[1, 3:])
-        errors.set_xlabel("Time (sec)")
-        errors.grid(True)
+        self.errors = self.fig.add_subplot(self.grid[1, 3:])
+        self.errors.set_xlabel("Time (sec)")
 
-        powers = self.fig.add_subplot(self.grid[2, 3:])
-        powers.set_xlabel("Time (sec)")
-        powers.grid(True)
+        self.powers = self.fig.add_subplot(self.grid[2, 3:])
+        self.powers.set_xlabel("Time (sec)")
 
-        return paths, velocities, errors, powers
+        return (self.paths, self.velocities, self.errors, self.powers)
 
     def next_figure(self, increment):
         new_plot_index = max(min((self.current_plot_index + increment), (len(self.sorted_names) - 1)), 0)
 
         if new_plot_index != self.current_plot_index:
-            self.fig.clear()  # FIXME Should the figure be cleared should the buttons be removed and the data changed?
-
+            self.clear_axis()  # FIXME Should the figure be cleared should the buttons be removed and the data changed?
+            self.clear_buttons()
             self.current_plot_index = new_plot_index
             self.plot_index(self.current_plot_index)
 
@@ -86,48 +89,59 @@ class Plot(object):
         if len(self.sorted_names) > 1 and self.show_buttons:
             if plot_index == 0:
                 next_button_axis = self.fig.add_subplot(self.grid[self.grid_rows - 1, :])
-                next_button = Button(next_button_axis, self.sorted_names[plot_index + 1])
-                next_button.on_clicked(self.next_plot)
+                self.next_button = Button(next_button_axis, self.sorted_names[plot_index + 1])
+                self.next_button.on_clicked(self.next_plot)
+
+                self.buttons_axes.append(next_button_axis)
             elif plot_index == len(self.sorted_names) - 1:
                 previous_button_axis = self.fig.add_subplot(self.grid[self.grid_rows - 1, :])
-                previous_button = Button(previous_button_axis, self.sorted_names[plot_index - 1])
-                previous_button.on_clicked(self.previous_plot)
+                self.previous_button = Button(previous_button_axis, self.sorted_names[plot_index - 1])
+                self.previous_button.on_clicked(self.previous_plot)
+                self.buttons_axes.append(previous_button_axis)
             else:
                 next_button_axis = self.fig.add_subplot(self.grid[self.grid_rows - 1, :int(self.grid_column / 2)])
-                next_button = Button(next_button_axis, self.sorted_names[plot_index + 1])
-                next_button.on_clicked(self.next_plot)
+                self.next_button = Button(next_button_axis, self.sorted_names[plot_index + 1])
+                self.next_button.on_clicked(self.next_plot)
+                self.buttons_axes.append(next_button_axis)
 
                 previous_button_axis = self.fig.add_subplot(self.grid[self.grid_rows - 1, int(self.grid_column / 2):])
-                previous_button = Button(previous_button_axis, self.sorted_names[plot_index - 1])
-                previous_button.on_clicked(self.previous_plot)
+                self.previous_button = Button(previous_button_axis, self.sorted_names[plot_index - 1])
+                self.previous_button.on_clicked(self.previous_plot)
+                self.buttons_axes.append(previous_button_axis)
 
-    def next_plot(self):
+    def next_plot(self, event):
         self.next_figure(1)
 
-    def previous_plot(self):
+    def previous_plot(self, event):
         self.next_figure(-1)
 
     def plot_index(self, plot_index):
         self.fig.canvas.set_window_title(str(self.sorted_names[plot_index]))
 
-        paths, velocities, errors, powers = self.create_axis()
+        self.show_grid()
+
         self.create_buttons(plot_index)
 
         current_file = self.files[self.sorted_names[plot_index]]
 
-        self.place_path(paths, current_file)
-        self.place_velocities(velocities, current_file)
-        self.place_errors(errors, current_file)
-        self.place_powers(powers, current_file)
+        self.place_path(current_file)
+        self.place_velocities(current_file)
+        self.place_errors(current_file)
+        self.place_powers(current_file)
 
-        self.view_subplot_legends(paths, velocities, errors, powers)
-        self.distinguish_paths(current_file, velocities, errors, powers)
+        self.view_subplot_legends(self.paths, self.velocities, self.errors, self.powers)
+        self.distinguish_paths(current_file, self.velocities, self.errors, self.powers)
 
-        if self.animation is not None:
-            self.animation.stop_animation()
+        if len(self.animations) > 0:
+            for anim in self.animations:
+                self.animations[anim].stop_animation()
 
-        self.animation = RobotMovement(paths, current_file, robot_width=self.robot_width,
-                                       robot_height=self.robot_height)
+        if plot_index not in self.animations:
+            self.animations[plot_index] = RobotMovement(self.paths, current_file, robot_width=self.robot_width,
+                                                        robot_height=self.robot_height)
+        else:
+            self.animations[plot_index].enable_animation()
+
         plt.draw()
 
     def show(self):
@@ -137,19 +151,18 @@ class Plot(object):
     def close_all(self):
         plt.close("all")
 
-    def place_powers(self, powers, current_file):
+    def place_powers(self, current_file):
         time = current_file["Time"]
         time -= time.min()
 
         right_power = current_file["pRight"]
         left_power = current_file["pLeft"]
 
-        powers.plot(time, right_power, c="blue", label="Right power")
-        powers.plot(time, left_power, c="red", label="Left power")
+        self.powers.plot(time, right_power, c="blue", label="Right power")
+        self.powers.plot(time, left_power, c="red", label="Left power")
+        self.powers.set_xlim(0, time.max())
 
-        powers.set_xlim(0, time.max())
-
-    def place_errors(self, errors, current_file):
+    def place_errors(self, current_file):
         time = current_file["Time"]
         time -= time.min()
 
@@ -157,18 +170,18 @@ class Plot(object):
         cross_track_error = current_file["XTE"]
         angle_error = current_file["angleE"]
 
-        errors.plot(time, lag_error, c="red", label="Lag error")
-        errors.plot(time, cross_track_error, c="blue", label="Cross track error")
-        errors.plot(time, angle_error, c="green", label="Angle error")
+        self.errors.plot(time, lag_error, c="red", label="Lag error")
+        self.errors.plot(time, cross_track_error, c="blue", label="Cross track error")
+        self.errors.plot(time, angle_error, c="green", label="Angle error")
 
-        errors.set_xlim(0, time.max())
+        self.errors.set_xlim(0, time.max())
 
     def view_subplot_legends(self, *args):
         for subplot in args:
             handles, labels = subplot.get_legend_handles_labels()
             subplot.legend(handles, labels)
 
-    def place_velocities(self, velocities, current_file):
+    def place_velocities(self, current_file):
         time = current_file["Time"]
         time -= time.min()
 
@@ -177,10 +190,10 @@ class Plot(object):
 
         # plt.text(.94, .92, "Max: {0:.4f}".format(velocity.max()), ha='center', va='center',
         #          transform=velocities.transAxes)
-        velocities.plot(time, actual_velocity, c="red", label="Actual max: {0:.4f}".format(actual_velocity.max()))
-        velocities.plot(time, target_velocity, c="blue",
-                        label="Target max: {0:.4f}".format(target_velocity.max()))
-        velocities.set_xlim(0, time.max())
+        self.velocities.plot(time, actual_velocity, c="red", label="Actual max: {0:.4f}".format(actual_velocity.max()))
+        self.velocities.plot(time, target_velocity, c="blue",
+                             label="Target max: {0:.4f}".format(target_velocity.max()))
+        self.velocities.set_xlim(0, time.max())
 
     def get_range_median(self, data):
         min_value = data.min()
@@ -188,7 +201,7 @@ class Plot(object):
         data_range = max_value - min_value
         return data_range, (max_value + min_value) / 2
 
-    def place_path(self, paths, current_file):
+    def place_path(self, current_file):
         x_target = current_file["xTarget"]
         max_range, max_x_center = self.get_range_median(x_target)
 
@@ -213,11 +226,11 @@ class Plot(object):
 
         max_range += (max(self.robot_height, self.robot_width) * 2.5)
 
-        paths.set_xlim(max_x_center - (max_range / 2), max_x_center + (max_range / 2))
-        paths.set_ylim(max_y_center - (max_range / 2), max_y_center + (max_range / 2))
+        self.paths.set_xlim(max_x_center - (max_range / 2), max_x_center + (max_range / 2))
+        self.paths.set_ylim(max_y_center - (max_range / 2), max_y_center + (max_range / 2))
 
-        paths.plot(x_actual, y_actual, c="red", label="Actual path")
-        paths.plot(x_target, y_target, c="blue", label="Target path")
+        self.paths.plot(x_actual, y_actual, c="red", label="Actual path")
+        self.paths.plot(x_target, y_target, c="blue", label="Target path")
 
     def distinguish_paths(self, current_file, *args):
         max_mins = [0]
@@ -235,6 +248,14 @@ class Plot(object):
             for i in range(1, len(max_mins)):
                 plot.axvspan(max_mins[i - 1], max_mins[i], facecolor=colors[i % len(colors)], alpha=0.1)
 
+    def clear_axis(self):
+        for ax in (self.paths, self.powers, self.velocities, self.errors):
+            ax.cla()
+
+    def show_grid(self):
+        for ax in (self.paths, self.powers, self.velocities, self.errors):
+            ax.grid(True)
+
 
 class RobotMovement(object):
     def __init__(self, ax, data, start_index=0, robot_width=.78, robot_height=.8):
@@ -242,7 +263,7 @@ class RobotMovement(object):
         self.robot_height = robot_height
         self.robot_width = robot_width
         self.ax = ax
-        ax.figure.canvas.callbacks.connect('button_press_event', self)
+        self.cid = ax.figure.canvas.callbacks.connect('button_press_event', self)
 
         self.time = data["Time"]
         self.delta_times = self.time
@@ -259,6 +280,13 @@ class RobotMovement(object):
         :return:
         """
         self.animation.event_source.interval = time * 1000
+
+    def enable_animation(self):
+        self.cid = self.ax.figure.canvas.callbacks.connect('button_press_event', self)
+
+    def restart_animation(self):
+        self.stop_animation()
+        self.enable_animation()
 
     def animate(self, i):
         # FIXME minimal issue of knowing what time delay to use. Time difference is unnoticeable only minor issue
@@ -300,6 +328,7 @@ class RobotMovement(object):
         if len(self.patches) != 0:
             self.animation.event_source.stop()
             self.set_patch_visibility(False)
+            self.ax.figure.canvas.mpl_disconnect(self.cid)
 
     def __call__(self, event):
         ax = event.inaxes
