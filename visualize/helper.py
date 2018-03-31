@@ -85,10 +85,14 @@ def get_coordinates_at_center(x_current, y_current, height, width, angle):
     return x, y
 
 
-def is_valid_log(file):
+def is_valid_log(file, headers=COLUMNS):
     fields = file.dtype.fields.keys()
 
-    return all(key in fields for key in COLUMNS)
+    return all(key in fields for key in headers)
+
+
+def contains_key(file, key):
+    return key in file.dtype.fields.keys()
 
 
 def sort_files(csv_files):
