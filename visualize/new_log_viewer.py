@@ -9,7 +9,12 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.widgets import Button
 
 import visualize
-from visualize.helper import get_data, is_valid_log, sort_files, get_velocity, get_coordinates_at_center
+from visualize.helper import get_data, is_valid_log, sort_files, get_velocity, get_coordinates_at_center, contains_key
+
+NEEDED_KEYS = (
+    "Time", "lagE", "xActual", "xTarget", "pRight", "pLeft", "yTarget", "yActual", "XTE", "angleE",
+    "angleActual"
+)
 
 
 # TODO add a slider so that you can interactively zoom through time.
@@ -73,7 +78,7 @@ class Plot(object):
         self.powers = self.fig.add_subplot(self.grid[2, 3:])
         self.powers.set_xlabel("Time (sec)")
 
-        return (self.paths, self.velocities, self.errors, self.powers)
+        return self.paths, self.velocities, self.errors, self.powers
 
     def next_figure(self, increment):
         new_plot_index = max(min((self.current_plot_index + increment), (len(self.sorted_names) - 1)), 0)
@@ -130,11 +135,14 @@ class Plot(object):
         self.place_powers(current_file)
 
         self.view_subplot_legends(self.paths, self.velocities, self.errors, self.powers)
-        self.distinguish_paths(current_file, self.velocities, self.errors, self.powers)
+
+        if contains_key(current_file, "pathNumber"):
+            self.distinguish_paths(current_file, self.velocities, self.errors, self.powers)
 
         if len(self.animations) > 0:
             for anim in self.animations:
                 self.animations[anim].stop_animation()
+                self.animations[anim].disconnect()
 
         if plot_index not in self.animations:
             self.animations[plot_index] = RobotMovement(self.paths, current_file, robot_width=self.robot_width,
@@ -264,7 +272,7 @@ class RobotMovement(object):
         self.robot_width = robot_width
         self.ax = ax
         self.cid = ax.figure.canvas.callbacks.connect('button_press_event', self)
-
+        self.playing = False
         self.time = data["Time"]
         self.delta_times = self.time
         self.delta_times = np.roll(self.delta_times, -1, 0) - self.delta_times
@@ -286,6 +294,7 @@ class RobotMovement(object):
 
     def restart_animation(self):
         self.stop_animation()
+        self.disconnect()
         self.enable_animation()
 
     def animate(self, i):
@@ -325,10 +334,14 @@ class RobotMovement(object):
             patch.set_visible(is_visible)
 
     def stop_animation(self):
-        if len(self.patches) != 0:
-            self.animation.event_source.stop()
+        if len(self.patches) != 0 and self.playing:
             self.set_patch_visibility(False)
-            self.ax.figure.canvas.mpl_disconnect(self.cid)
+            self.animation.event_source.stop()
+            del self.animation
+            self.playing = False
+
+    def disconnect(self):
+        self.ax.figure.canvas.mpl_disconnect(self.cid)
 
     def __call__(self, event):
         ax = event.inaxes
@@ -343,8 +356,9 @@ class RobotMovement(object):
                                                          interval=0,
                                                          blit=True,
                                                          repeat=False)
-            else:
-                self.stop_animation()
+                self.playing = True
+            # else:
+            #     self.stop_animation()
 
 
 def main(open_path):
@@ -360,7 +374,7 @@ def main(open_path):
             for file in files:
                 file_data = get_data(file)
 
-                if is_valid_log(file_data):
+                if is_valid_log(file_data, NEEDED_KEYS):
                     try:
                         name = datetime.strptime(os.path.basename(file), "%Y-%m-%d %H-%M-%S.csv")
                     except ValueError:
