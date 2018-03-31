@@ -1,15 +1,20 @@
+# coding=utf-8
 import os
 from datetime import datetime
 
 import easygui
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import animation, patches
+from matplotlib import patches
+from matplotlib.animation import FuncAnimation
+from matplotlib.axes import Axes
+from matplotlib.backend_bases import KeyEvent, MouseEvent
 from matplotlib.gridspec import GridSpec
 from matplotlib.widgets import Button
 
 import visualize
-from visualize.helper import get_data, is_valid_log, sort_files, get_velocity, get_coordinates_at_center, contains_key
+from visualize.helper import get_data, is_valid_log, sort_files, get_velocity, get_coordinates_at_center, \
+    contains_key, get_range_median, view_subplot_legends
 
 NEEDED_KEYS = (
     "Time", "lagE", "xActual", "xTarget", "pRight", "pLeft", "yTarget", "yActual", "XTE", "angleE",
@@ -22,9 +27,44 @@ NEEDED_KEYS = (
 # TODO make system more efficient by creating the axis only once and setting the data on the graphs only instead
 # TODO show a bar in the smaller graphs to show where it is in time right now
 # TODO make 'h' button popup key shortcuts
-class Plot(object):
 
-    def __init__(self, files, show_buttons=True, robot_width=.78, robot_height=.8) -> None:
+def distinguish_paths(current_file: np.ndarray, *args: Axes) -> None:
+    """
+
+    :param current_file:
+    :param args:
+    :return:
+    """
+    max_mins = [0]
+
+    min_time = current_file["Time"].min()
+    colors = ["red", "blue", "green"]
+
+    for i in range(current_file["pathNumber"].min(), current_file["pathNumber"].max() + 1):
+        path = current_file[current_file["pathNumber"] == i]
+        max_path_time = path["Time"].max()
+
+        max_mins.append(max_path_time - min_time)
+
+    for plot in args:
+        for i in range(1, len(max_mins)):
+            plot.axvspan(max_mins[i - 1], max_mins[i], facecolor=colors[i % len(colors)], alpha=0.1)
+
+
+class Plot(object):
+    """
+
+    """
+
+    def __init__(self, files: dict, show_buttons: bool = True, robot_width: float = .78,
+                 robot_height: float = .8) -> None:
+        """
+
+        :param files:
+        :param show_buttons:
+        :param robot_width:
+        :param robot_height:
+        """
         super().__init__()
         self.robot_width = robot_width
         self.robot_height = robot_height
@@ -56,16 +96,29 @@ class Plot(object):
         self.plot_index(self.current_plot_index)
 
     def clear_buttons(self):
+        """
+
+        :return:
+        """
         while len(self.buttons_axes) != 0:
             self.buttons_axes.pop().remove()
 
-    def handle_key_event(self, event):
+    def handle_key_event(self, event: KeyEvent) -> None:
+        """
+
+        :param event:
+        :return:
+        """
         if event.key == "right":
             self.next_figure(1)
         if event.key == "left":
             self.next_figure(-1)
 
     def create_axis(self):  # TODO should this only be done one?
+        """
+
+        :return:
+        """
         self.paths = self.fig.add_subplot(self.grid[:3, :3])
 
         self.velocities = self.fig.add_subplot(self.grid[0, 3:])
@@ -80,7 +133,11 @@ class Plot(object):
 
         return self.paths, self.velocities, self.errors, self.powers
 
-    def next_figure(self, increment):
+    def next_figure(self, increment: int) -> None:
+        """
+
+        :param increment:
+        """
         new_plot_index = max(min((self.current_plot_index + increment), (len(self.sorted_names) - 1)), 0)
 
         if new_plot_index != self.current_plot_index:
@@ -89,7 +146,12 @@ class Plot(object):
             self.current_plot_index = new_plot_index
             self.plot_index(self.current_plot_index)
 
-    def create_buttons(self, plot_index):
+    def create_buttons(self, plot_index: int) -> None:
+        """
+
+        :param plot_index:
+        :return:
+        """
         # FIXME make the button actually be able to be pressed (ome reason it does not work)
         if len(self.sorted_names) > 1 and self.show_buttons:
             if plot_index == 0:
@@ -114,13 +176,28 @@ class Plot(object):
                 self.previous_button.on_clicked(self.previous_plot)
                 self.buttons_axes.append(previous_button_axis)
 
-    def next_plot(self, event):
+    def next_plot(self, event: MouseEvent) -> None:
+        """
+
+        :param event:
+        :return:
+        """
         self.next_figure(1)
 
-    def previous_plot(self, event):
+    def previous_plot(self, event: MouseEvent) -> None:
+        """
+
+        :param event:
+        :return:
+        """
         self.next_figure(-1)
 
-    def plot_index(self, plot_index):
+    def plot_index(self, plot_index: int) -> None:
+        """
+
+        :param plot_index:
+        :return:
+        """
         self.fig.canvas.set_window_title(str(self.sorted_names[plot_index]))
 
         self.show_grid()
@@ -134,16 +211,12 @@ class Plot(object):
         self.place_errors(current_file)
         self.place_powers(current_file)
 
-        self.view_subplot_legends(self.paths, self.velocities, self.errors, self.powers)
+        view_subplot_legends(self.paths, self.velocities, self.errors, self.powers)
 
         if contains_key(current_file, "pathNumber"):
-            self.distinguish_paths(current_file, self.velocities, self.errors, self.powers)
+            distinguish_paths(current_file, self.velocities, self.errors, self.powers)
 
-        if len(self.animations) > 0:
-            for anim in self.animations:
-                self.animations[anim].stop_animation()
-                self.animations[anim].disconnect()
-
+        self.stop_all_animations()
         if plot_index not in self.animations:
             self.animations[plot_index] = RobotMovement(self.paths, current_file, robot_width=self.robot_width,
                                                         robot_height=self.robot_height)
@@ -153,13 +226,26 @@ class Plot(object):
         plt.draw()
 
     def show(self):
+        """
+
+        :return:
+        """
         self.grid.tight_layout(self.fig)
         plt.show()
 
     def close_all(self):
-        plt.close("all")
+        """
 
-    def place_powers(self, current_file):
+        :return:
+        """
+        plt.close(self.fig)
+
+    def place_powers(self, current_file: np.ndarray) -> None:
+        """
+
+        :param current_file:
+        :return:
+        """
         time = current_file["Time"]
         time -= time.min()
 
@@ -170,7 +256,12 @@ class Plot(object):
         self.powers.plot(time, left_power, c="red", label="Left power")
         self.powers.set_xlim(0, time.max())
 
-    def place_errors(self, current_file):
+    def place_errors(self, current_file: np.ndarray) -> None:
+        """
+
+        :param current_file:
+        :return:
+        """
         time = current_file["Time"]
         time -= time.min()
 
@@ -184,12 +275,12 @@ class Plot(object):
 
         self.errors.set_xlim(0, time.max())
 
-    def view_subplot_legends(self, *args):
-        for subplot in args:
-            handles, labels = subplot.get_legend_handles_labels()
-            subplot.legend(handles, labels)
+    def place_velocities(self, current_file: np.ndarray) -> None:
+        """
 
-    def place_velocities(self, current_file):
+        :param current_file:
+        :return:
+        """
         time = current_file["Time"]
         time -= time.min()
 
@@ -203,30 +294,29 @@ class Plot(object):
                              label="Target max: {0:.4f}".format(target_velocity.max()))
         self.velocities.set_xlim(0, time.max())
 
-    def get_range_median(self, data):
-        min_value = data.min()
-        max_value = data.max()
-        data_range = max_value - min_value
-        return data_range, (max_value + min_value) / 2
+    def place_path(self, current_file: np.ndarray) -> None:
+        """
 
-    def place_path(self, current_file):
+        :param current_file:
+        :return:
+        """
         x_target = current_file["xTarget"]
-        max_range, max_x_center = self.get_range_median(x_target)
+        max_range, max_x_center = get_range_median(x_target)
 
         y_target = current_file["yTarget"]
-        range_1, max_y_center = self.get_range_median(y_target)
+        range_1, max_y_center = get_range_median(y_target)
         max_range = max(max_range, range_1)
 
         x_actual = current_file["xActual"]
 
-        range_1, x_center = self.get_range_median(x_actual)
+        range_1, x_center = get_range_median(x_actual)
 
         if max_range < range_1:
             max_x_center = x_center
             max_range = range_1
 
         y_actual = current_file["yActual"]
-        range_1, y_center = self.get_range_median(y_actual)
+        range_1, y_center = get_range_median(y_actual)
 
         if max_range < range_1:
             max_y_center = y_center
@@ -240,33 +330,47 @@ class Plot(object):
         self.paths.plot(x_actual, y_actual, c="red", label="Actual path")
         self.paths.plot(x_target, y_target, c="blue", label="Target path")
 
-    def distinguish_paths(self, current_file, *args):
-        max_mins = [0]
-
-        min_time = current_file["Time"].min()
-        colors = ["red", "blue", "green"]
-
-        for i in range(current_file["pathNumber"].min(), current_file["pathNumber"].max() + 1):
-            path = current_file[current_file["pathNumber"] == i]
-            max_path_time = path["Time"].max()
-
-            max_mins.append(max_path_time - min_time)
-
-        for plot in args:
-            for i in range(1, len(max_mins)):
-                plot.axvspan(max_mins[i - 1], max_mins[i], facecolor=colors[i % len(colors)], alpha=0.1)
-
     def clear_axis(self):
+        """
+
+        :return:
+        """
         for ax in (self.paths, self.powers, self.velocities, self.errors):
             ax.cla()
 
     def show_grid(self):
+        """
+
+        """
         for ax in (self.paths, self.powers, self.velocities, self.errors):
             ax.grid(True)
 
+    def stop_all_animations(self):
+        """
+
+        :return:
+        """
+        if len(self.animations) > 0:
+            for animation in self.animations:
+                self.animations[animation].stop_animation()
+                self.animations[animation].disconnect()
+
 
 class RobotMovement(object):
-    def __init__(self, ax, data, start_index=0, robot_width=.78, robot_height=.8):
+    """
+
+    """
+
+    def __init__(self, ax: Axes, data: np.ndarray, start_index: int = 0, robot_width: float = .78,
+                 robot_height: float = .8) -> None:
+        """
+
+        :param ax:
+        :param data:
+        :param start_index:
+        :param robot_width:
+        :param robot_height:
+        """
         self.start_index = start_index
         self.robot_height = robot_height
         self.robot_width = robot_width
@@ -282,7 +386,7 @@ class RobotMovement(object):
                      "target": (data["xTarget"], data["yTarget"], data["angleTarget"])}
         self.patches = []
 
-    def set_interval(self, time):
+    def set_interval(self, time: float) -> None:
         """
         :param time: Time in seconds
         :return:
@@ -290,14 +394,25 @@ class RobotMovement(object):
         self.animation.event_source.interval = time * 1000
 
     def enable_animation(self):
+        """
+
+        """
         self.cid = self.ax.figure.canvas.callbacks.connect('button_press_event', self)
 
     def restart_animation(self):
+        """
+
+        """
         self.stop_animation()
         self.disconnect()
         self.enable_animation()
 
-    def animate(self, i):
+    def animate(self, i: int) -> iter:
+        """
+
+        :param i:
+        :return:
+        """
         # FIXME minimal issue of knowing what time delay to use. Time difference is unnoticeable only minor issue
         i += self.start_index
 
@@ -308,7 +423,11 @@ class RobotMovement(object):
             self.set_patch_visibility(False)
         return self.patches
 
-    def set_patch_location(self, i):
+    def set_patch_location(self, i: int) -> None:
+        """
+
+        :param i:
+        """
         for patch, key in zip(self.patches, ("actual", "target")):
             x, y, angle = self.data[key]
 
@@ -318,6 +437,10 @@ class RobotMovement(object):
             patch.angle = np.rad2deg(angle[i])
 
     def create_patches(self):
+        """
+
+        :return:
+        """
         patch_actual = patches.Rectangle((0, 0), width=self.robot_width, height=self.robot_height, angle=0,
                                          fc='y', color="red")
 
@@ -329,11 +452,18 @@ class RobotMovement(object):
 
         return self.patches
 
-    def set_patch_visibility(self, is_visible):
+    def set_patch_visibility(self, is_visible: bool) -> None:
+        """
+
+        :param is_visible:
+        """
         for patch in self.patches:
             patch.set_visible(is_visible)
 
     def stop_animation(self):
+        """
+
+        """
         if len(self.patches) != 0 and self.playing:
             self.set_patch_visibility(False)
             self.animation.event_source.stop()
@@ -341,27 +471,39 @@ class RobotMovement(object):
             self.playing = False
 
     def disconnect(self):
+        """
+
+        """
         self.ax.figure.canvas.mpl_disconnect(self.cid)
 
-    def __call__(self, event):
+    def __call__(self, event: MouseEvent) -> None:
+        """
+
+        :param event:
+        """
         ax = event.inaxes
 
         if ax is not None and ax == self.ax:
 
             if event.dblclick:
                 self.stop_animation()
-                self.animation = animation.FuncAnimation(self.ax.figure, self.animate,
-                                                         init_func=self.create_patches,
-                                                         frames=self.delta_times.shape[0] - self.start_index,
-                                                         interval=0,
-                                                         blit=True,
-                                                         repeat=False)
+                self.animation = FuncAnimation(self.ax.figure, self.animate,
+                                               init_func=self.create_patches,
+                                               frames=self.delta_times.shape[0] - self.start_index,
+                                               interval=0,
+                                               blit=True,
+                                               repeat=False)
                 self.playing = True
             # else:
             #     self.stop_animation()
 
 
 def main(open_path):
+    """
+
+    :param open_path:
+    :return:
+    """
     while True:
         files = easygui.fileopenbox('Please locate csv files', 'Specify File', default=open_path, filetypes='*.csv',
                                     multiple=True)

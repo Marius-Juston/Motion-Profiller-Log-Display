@@ -1,3 +1,4 @@
+# coding=utf-8
 import os
 
 import easygui
@@ -15,6 +16,11 @@ from visualize.helper import is_empty_model, is_valid_log, get_data, plot_hyperp
 
 
 def get_features(file_data):
+    """
+
+    :param file_data:
+    :return:
+    """
     average_power = (file_data["pLeft"] + file_data["pRight"]) / 2.0
 
     time = file_data["Time"]
@@ -30,14 +36,29 @@ def get_features(file_data):
 
 
 def get_labels(file_data):
+    """
+
+    :param file_data:
+    :return:
+    """
     return file_data["classification"]
 
 
 def has_classification(file_data):
+    """
+
+    :param file_data:
+    :return:
+    """
     return "classification" in file_data.dtype.fields
 
 
 def find_constants(open_path):
+    """
+
+    :param open_path:
+    :return:
+    """
     if not os.path.exists(MODEL_FILE):
         easygui.msgbox("There are no models to use to classify the data. Please train algorithm first.")
         return
@@ -91,6 +112,15 @@ def find_constants(open_path):
 
 
 def find_gain(clf, file_data, is_data=False, ax3d=None, ax2d=None):
+    """
+
+    :param clf:
+    :param file_data:
+    :param is_data:
+    :param ax3d:
+    :param ax2d:
+    :return:
+    """
     if not is_data:
         file_data = np.genfromtxt(file_data, delimiter=',', dtype=DTYPE, names=True)
 
@@ -154,16 +184,31 @@ def find_gain(clf, file_data, is_data=False, ax3d=None, ax2d=None):
 
 
 def find_linear_best_fit_line(x, y):
+    """
+
+    :param x:
+    :param y:
+    :return:
+    """
     m, b = np.polyfit(x, y, 1)
 
     return m, b
 
 
 def create_blank_classifier():
+    """
+
+    :return:
+    """
     return SVC(kernel="rbf", random_state=0)
 
 
 def train_model(open_path):
+    """
+
+    :param open_path:
+    :return:
+    """
     # TODO add lasso selection of points for data that was not classified manually.
     # TODO Should be able to select outliers and what side is positive or not
 
@@ -333,10 +378,20 @@ def train_model(open_path):
 
 
 def separate_feature(x):
+    """
+
+    :param x:
+    :return:
+    """
     return x[:, 0], x[:, 1], x[:, 2]
 
 
 def main(open_path):
+    """
+
+    :param open_path:
+    :return:
+    """
     while True:
         answer = easygui.boolbox("Do you wish to train your model or find constants?",
                                  choices=["[T]rain", "[V]iew Constants"])

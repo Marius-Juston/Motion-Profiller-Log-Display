@@ -1,3 +1,4 @@
+# coding=utf-8
 import easygui
 
 from visualize import constants_finder, new_log_viewer

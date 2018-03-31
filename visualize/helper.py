@@ -1,7 +1,9 @@
+# coding=utf-8
 import math
 from datetime import datetime
 
 import numpy as np
+from matplotlib.axes import Axes
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
 from skimage import measure
 from sklearn.exceptions import NotFittedError
@@ -10,10 +12,21 @@ from visualize import DELIMITER, DTYPE, ENCODING, COLUMNS
 
 
 def get_data(file):
+    """
+
+    :param file:
+    :return:
+    """
     return np.genfromtxt(file, delimiter=DELIMITER, dtype=DTYPE, names=True, encoding=ENCODING)
 
 
 def plot_hyperplane(clf, ax):
+    """
+
+    :param clf:
+    :param ax:
+    :return:
+    """
     # get the separating hyperplane
     interval = .1
     interval = int(1 / interval)
@@ -34,7 +47,7 @@ def plot_hyperplane(clf, ax):
     verteces, faces, _, _ = measure.marching_cubes(z, 0)
     # Scale and transform to actual size of the interesting volume
     verteces = verteces * [x_max - x_min, y_max - y_min, z_max - z_min] / interval
-    verteces = verteces + [x_min, y_min, z_min]
+    verteces += [x_min, y_min, z_min]
     # and create a mesh to display
     # mesh = Poly3DCollection(verteces[faces],
     #                         facecolor='orange', alpha=0.3)
@@ -45,7 +58,14 @@ def plot_hyperplane(clf, ax):
     return mesh
 
 
-def get_velocity(time, file_data, actual=True):
+def get_velocity(time: np.ndarray, file_data: np.ndarray, actual: bool = True) -> np.ndarray:
+    """
+
+    :param time:
+    :param file_data:
+    :param actual:
+    :return:
+    """
     previous_data = np.roll(file_data, 1)
 
     if actual:
@@ -62,7 +82,13 @@ def get_velocity(time, file_data, actual=True):
     return velocity
 
 
-def get_acceleration(time, velocity):
+def get_acceleration(time: np.ndarray, velocity: np.ndarray) -> np.ndarray:
+    """
+
+    :param time:
+    :param velocity:
+    :return:
+    """
     previous_velocity = np.roll(velocity, 1)
     previous_time = np.roll(time, 1)
     acceleration = (velocity - previous_velocity) / (time - previous_time)
@@ -72,6 +98,15 @@ def get_acceleration(time, velocity):
 
 
 def get_coordinates_at_center(x_current, y_current, height, width, angle):
+    """
+
+    :param x_current:
+    :param y_current:
+    :param height:
+    :param width:
+    :param angle:
+    :return:
+    """
     angle = np.math.atan2((height / 2), (width / 2)) + np.deg2rad(angle)
 
     d = np.sqrt((width / 2) ** 2 + (height / 2) ** 2)
@@ -85,17 +120,29 @@ def get_coordinates_at_center(x_current, y_current, height, width, angle):
     return x, y
 
 
-def is_valid_log(file, headers=COLUMNS):
+def is_valid_log(file: np.ndarray, headers: iter = COLUMNS) -> bool:
+    """
+
+    :param file:
+    :param headers:
+    :return:
+    """
     fields = file.dtype.fields.keys()
 
     return all(key in fields for key in headers)
 
 
-def contains_key(file, key):
+def contains_key(file: np.ndarray, key: str) -> bool:
+    """
+
+    :param file:
+    :param key:
+    :return:
+    """
     return key in file.dtype.fields.keys()
 
 
-def sort_files(csv_files):
+def sort_files(csv_files: dict) -> iter:
     """
     Returns a sorted list of keys. The dates will be sorted first and with latest first then
     the non date objects are added and sorted alphabetically
@@ -118,6 +165,11 @@ def sort_files(csv_files):
 
 
 def find_largest_factor(x):
+    """
+
+    :param x:
+    :return:
+    """
     i = math.ceil(math.sqrt(x))
     while i >= 1:
         if x % i == 0:
@@ -130,13 +182,46 @@ def find_largest_factor(x):
 
 
 def set_visible(patches, value):
+    """
+
+    :param patches:
+    :param value:
+    """
     for patch in patches:
         patch.set_visible(value)
 
 
 def is_empty_model(clf):
+    """
+
+    :param clf:
+    :return:
+    """
     try:
         clf.predict([[0, 0, 0]])
         return False
     except NotFittedError:
         return True
+
+
+def get_range_median(data: np.ndarray) -> (float, float):
+    """
+
+    :param data:
+    :return:
+    """
+    min_value = data.min()
+    max_value = data.max()
+    data_range = max_value - min_value
+    return data_range, (max_value + min_value) / 2
+
+
+def view_subplot_legends(*args: Axes) -> None:
+    """
+
+    :param args:
+    :return:
+    """
+    for subplot in args:
+        handles, labels = subplot.get_legend_handles_labels()
+        subplot.legend(handles, labels)
