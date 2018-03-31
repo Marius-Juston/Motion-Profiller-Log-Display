@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 # errors, powers, velocity = fig.subplots(3)
 # plt.show()
 from matplotlib.gridspec import GridSpec
-from matplotlib.widgets import Slider, Button
+from matplotlib.widgets import Button
 
 fig = plt.figure()
 gs = GridSpec(4, 6, fig)
