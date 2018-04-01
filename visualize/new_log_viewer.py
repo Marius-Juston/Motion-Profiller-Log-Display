@@ -406,12 +406,11 @@ class RobotMovement(object):
     def __init__(self, ax: Axes, data: np.ndarray, start_index: int = 0, robot_width: float = .78,
                  robot_height: float = .8) -> None:
         """
-
-        :param ax:
-        :param data:
-        :param start_index:
-        :param robot_width:
-        :param robot_height:
+        :param ax: the ax to draw the animation on
+        :param data: the data to retrieve the position and time interval rom
+        :param start_index: the index to start the animation at
+        :param robot_width: the robot width
+        :param robot_height: the robot height
         """
         self.start_index = start_index
         self.robot_height = robot_height
@@ -432,20 +431,20 @@ class RobotMovement(object):
 
     def set_interval(self, time: float) -> None:
         """
-        :param time: Time in seconds
-        :return:
+Sets the timer interval
+        :param time: interval in seconds
         """
         self.animation.event_source.interval = time * 1000
 
     def enable_animation(self):
         """
-
+Recreates a mouse listener
         """
         self.cid = self.ax.figure.canvas.callbacks.connect('button_press_event', self)
 
     def restart_animation(self):
         """
-
+Restarts the animation. Stops the animation, disconnects its current mouse listener then creates a new listener
         """
         self.stop_animation()
         self.disconnect()
@@ -453,9 +452,9 @@ class RobotMovement(object):
 
     def animate(self, i: int) -> iter:
         """
-
-        :param i:
-        :return:
+Method that is run during the animation, this method updates the patch locations and sets the timer interval to be correct
+        :param i: the index in the animation the animation is currently at
+        :return: the patches in the animation to be drawn
         """
         # FIXME minimal issue of knowing what time delay to use. Time difference is unnoticeable only minor issue
         i += self.start_index
@@ -469,8 +468,8 @@ class RobotMovement(object):
 
     def set_patch_location(self, i: int) -> None:
         """
-
-        :param i:
+Sets the location of the patches given its current index in the animation. Sets the x,y and angle coordinates
+        :param i: index of the animation is at
         """
         for robots, angle_indicator, key in zip(self.rectangles, self.arrows, ("actual", "target")):
             x, y, angle = self.data[key]
@@ -485,8 +484,8 @@ class RobotMovement(object):
 
     def create_patches(self):
         """
-
-        :return:
+Creates the patches that will used during the animation
+        :return: the patches that will used during the animation
         """
         starting_xy = (0, 0)
 
@@ -510,15 +509,15 @@ class RobotMovement(object):
 
     def set_patch_visibility(self, is_visible: bool) -> None:
         """
-
-        :param is_visible:
+Sets the patch visibility
+        :param is_visible: True means visible, False means not visible
         """
         for patch in self.patches:
             patch.set_visible(is_visible)
 
     def stop_animation(self):
         """
-
+Stops the animation running by stopping the event_source, setting the patch visibility to False, deleting the animation
         """
         if len(self.rectangles) != 0 and self.playing:
             self.set_patch_visibility(False)
@@ -528,14 +527,14 @@ class RobotMovement(object):
 
     def disconnect(self):
         """
-
+Disconnects the mouse click listener that was created by this class
         """
         self.ax.figure.canvas.mpl_disconnect(self.cid)
 
     def __call__(self, event: MouseEvent) -> None:
         """
-
-        :param event:
+This is called when you click with your mouse on the current figure
+        :param event: the mouse event containing information about the mouse when calling this method
         """
         ax = event.inaxes
 
@@ -556,9 +555,9 @@ class RobotMovement(object):
 
 def main(open_path):
     """
-
-    :param open_path:
-    :return:
+This is the main loop which runs until the user no selects any file
+    :param open_path: the default location to start your search
+    :return: the ending location the folder search was looking at
     """
     while True:
         files = easygui.fileopenbox('Please locate csv files', 'Specify File', default=open_path, filetypes='*.csv',
