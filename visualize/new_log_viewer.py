@@ -10,11 +10,12 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.axes import Axes
 from matplotlib.backend_bases import KeyEvent, MouseEvent
 from matplotlib.gridspec import GridSpec
+from matplotlib.patches import FancyArrow
 from matplotlib.widgets import Button
 
 import visualize
 from visualize.helper import get_data, is_valid_log, sort_files, get_velocity, get_coordinates_at_center, \
-    contains_key, get_range_median, view_subplot_legends
+    contains_key, get_range_median, view_subplot_legends, rotate_points_around_point
 
 NEEDED_KEYS = (
     "Time", "lagE", "xActual", "xTarget", "pRight", "pLeft", "yTarget", "yActual", "XTE", "angleE",
@@ -49,6 +50,42 @@ def distinguish_paths(current_file: np.ndarray, *args: Axes) -> None:
     for plot in args:
         for i in range(1, len(max_mins)):
             plot.axvspan(max_mins[i - 1], max_mins[i], facecolor=colors[i % len(colors)], alpha=0.1)
+
+
+class DirectionalArrow(FancyArrow):
+
+    def __init__(self, xy, angle, total_length, width, in_degrees=False, head_width=None,
+                 shape='full', overhang=0, head_starts_at_zero=False, **kwargs):
+        if in_degrees:
+            angle = np.radians(angle)
+        self.angle = angle
+        self.length = total_length
+        dx = np.cos(angle) * total_length
+        dy = np.sin(angle) * total_length
+        x, y = xy
+        super().__init__(x, y, dx, dy, width=width, length_includes_head=True,
+                         head_width=head_width, head_length=total_length / 2, shape=shape, overhang=overhang,
+                         head_starts_at_zero=head_starts_at_zero, **kwargs)
+
+        # self.x =
+
+        self.center_xy = [x + dx / 2, y + dy / 2]
+
+        self.set_center_xy((x, y))
+
+    def set_angle(self, angle, in_degrees=False):
+        if in_degrees:
+            angle = np.radians(angle)
+        rotate_angle = self.angle - angle
+
+        rotated_points = rotate_points_around_point(self.get_xy(), self.center_xy, rotate_angle)
+        self.set_xy(rotated_points)
+
+        self.angle = angle
+
+    def set_center_xy(self, xy):
+        self.set_xy(self.get_xy() + (xy[0] - self.center_xy[0], xy[1] - self.center_xy[1]))
+        self.center_xy = xy
 
 
 class Plot(object):
@@ -88,11 +125,21 @@ class Plot(object):
 
         self.grid = GridSpec(self.grid_rows, self.grid_column)
 
+        self.paths = self.fig.add_subplot(self.grid[:3, :3])
+        self.powers = self.fig.add_subplot(self.grid[2, 3:])
+        self.errors = self.fig.add_subplot(self.grid[1, 3:])
+        self.velocities = self.fig.add_subplot(self.grid[0, 3:])
+
+        self.format_axis()
+
         self.buttons_axes = []
+        self.next_button = None
+        self.previous_button = None
+
         self.animations = {}
         self.current_plot_index = 0
         # self.animation = None
-        self.create_axis()
+
         self.plot_index(self.current_plot_index)
 
     def clear_buttons(self):
@@ -114,21 +161,17 @@ class Plot(object):
         if event.key == "left":
             self.next_figure(-1)
 
-    def create_axis(self):  # TODO should this only be done one?
+    def format_axis(self):
         """
 
         :return:
         """
-        self.paths = self.fig.add_subplot(self.grid[:3, :3])
 
-        self.velocities = self.fig.add_subplot(self.grid[0, 3:])
         self.velocities.set_xlabel("Time (sec)")
         self.velocities.set_ylabel("Velocity m/s")
 
-        self.errors = self.fig.add_subplot(self.grid[1, 3:])
         self.errors.set_xlabel("Time (sec)")
 
-        self.powers = self.fig.add_subplot(self.grid[2, 3:])
         self.powers.set_xlabel("Time (sec)")
 
         return self.paths, self.velocities, self.errors, self.powers
@@ -141,7 +184,7 @@ class Plot(object):
         new_plot_index = max(min((self.current_plot_index + increment), (len(self.sorted_names) - 1)), 0)
 
         if new_plot_index != self.current_plot_index:
-            self.clear_axis()  # FIXME Should the figure be cleared should the buttons be removed and the data changed?
+            self.clear_axis()
             self.clear_buttons()
             self.current_plot_index = new_plot_index
             self.plot_index(self.current_plot_index)
@@ -152,7 +195,6 @@ class Plot(object):
         :param plot_index:
         :return:
         """
-        # FIXME make the button actually be able to be pressed (ome reason it does not work)
         if len(self.sorted_names) > 1 and self.show_buttons:
             if plot_index == 0:
                 next_button_axis = self.fig.add_subplot(self.grid[self.grid_rows - 1, :])
@@ -384,6 +426,8 @@ class RobotMovement(object):
 
         self.data = {"actual": (data["xActual"], data["yActual"], data["angleActual"]),
                      "target": (data["xTarget"], data["yTarget"], data["angleTarget"])}
+        self.rectangles = []
+        self.arrows = []
         self.patches = []
 
     def set_interval(self, time: float) -> None:
@@ -428,28 +472,40 @@ class RobotMovement(object):
 
         :param i:
         """
-        for patch, key in zip(self.patches, ("actual", "target")):
+        for robots, angle_indicator, key in zip(self.rectangles, self.arrows, ("actual", "target")):
             x, y, angle = self.data[key]
 
-            patch.set_xy(
-                get_coordinates_at_center(x[i], y[i], patch.get_height(),
-                                          patch.get_width(), patch.angle))
-            patch.angle = np.rad2deg(angle[i])
+            robots.set_xy(
+                get_coordinates_at_center(x[i], y[i], robots.get_height(),
+                                          robots.get_width(), robots.angle))
+            robots.angle = np.rad2deg(angle[i])
+
+            angle_indicator.set_center_xy((x[i], y[i]))
+            angle_indicator.set_angle(angle[i])
 
     def create_patches(self):
         """
 
         :return:
         """
-        patch_actual = patches.Rectangle((0, 0), width=self.robot_width, height=self.robot_height, angle=0,
+        starting_xy = (0, 0)
+
+        patch_actual = patches.Rectangle(starting_xy, width=self.robot_width, height=self.robot_height, angle=0,
                                          fc='y', color="red")
 
-        patch_target = patches.Rectangle((0, 0), width=.78, height=.8, angle=0,
+        patch_target = patches.Rectangle(starting_xy, width=.78, height=.8, angle=0,
                                          fc='y', color="blue")
-        self.patches = [self.ax.add_patch(patch_actual), self.ax.add_patch(patch_target)]
+
+        arrow_actual = DirectionalArrow(starting_xy, 0, self.robot_height, self.robot_width / 4, color="red")
+        arrow_target = DirectionalArrow(starting_xy, 0, self.robot_height, self.robot_width / 4, color="blue")
+
+        self.rectangles = [self.ax.add_patch(patch_actual), self.ax.add_patch(patch_target)]
+        self.arrows = [self.ax.add_patch(arrow_actual), self.ax.add_patch(arrow_target)]
 
         self.set_patch_location(0)
 
+        self.patches.extend(self.rectangles)
+        self.patches.extend(self.arrows)
         return self.patches
 
     def set_patch_visibility(self, is_visible: bool) -> None:
@@ -464,7 +520,7 @@ class RobotMovement(object):
         """
 
         """
-        if len(self.patches) != 0 and self.playing:
+        if len(self.rectangles) != 0 and self.playing:
             self.set_patch_visibility(False)
             self.animation.event_source.stop()
             del self.animation

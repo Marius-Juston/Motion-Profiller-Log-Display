@@ -11,6 +11,17 @@ from sklearn.exceptions import NotFittedError
 from visualize import DELIMITER, DTYPE, ENCODING, COLUMNS
 
 
+def rotate_points_around_point(points, point, angle):
+    rotated_points = points[:]
+
+    rotated_points -= point
+    rotated_points = np.dot(points, [[np.cos(angle), -np.sin(angle)],
+                                     [np.sin(angle), np.cos(angle)]])
+    rotated_points += point
+
+    return rotated_points
+
+
 def get_data(file):
     """
 
