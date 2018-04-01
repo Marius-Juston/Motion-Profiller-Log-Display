@@ -63,7 +63,7 @@ class DirectionalArrow(FancyArrow):
             angle = math.radians(angle)
         rotate_angle = self.angle - angle
 
-        rotated_points = rotate_points_around_point(self.get_xy(), self.center_xy, rotate_angle)
+        rotated_points = rotate_points_around_point(self.get_xy(), rotate_angle, self.center_xy)
         self.set_xy(rotated_points)
 
         self.angle = angle

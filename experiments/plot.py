@@ -7,10 +7,25 @@ if __name__ == '__main__':
 
     time = data["Time"]
 
-    velocity = get_velocity(data)
+    velocity = get_velocity(time, data, actual=False)
     acceleration = get_acceleration(time, velocity)
 
-    plt.subplot(211).plot(time, velocity)
-    plt.subplot(212).plot(time, acceleration)
+    velocities = plt.subplot(211)
+    accelerations = plt.subplot(212)
+    velocities.plot(time, velocity)
+    accelerations.scatter(time, acceleration)
+    import numpy as np
+
+    X = np.linspace(time.min(), time.max(), velocity.shape[0])
+
+    coefficients = np.polyfit(time, np.log(velocity), 10)  # Use log(x) as the input to polyfit.
+
+    velocities.plot(time, np.polyval(coefficients, time), "--", label="fit")
+
+    velocity = get_velocity(time, data, actual=True)
+    acceleration = get_acceleration(time, velocity)
+
+    velocities.plot(time, velocity)
+    accelerations.scatter(time, acceleration)
 
     plt.show()
