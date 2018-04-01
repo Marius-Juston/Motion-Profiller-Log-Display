@@ -15,9 +15,9 @@ This program allows for the visualization of the:
 + actual robot velocity,
 + target robot velocity,
 + errors:
-⋅⋅* lag error: how far off in front or backwards the robot is from its target position
-⋅⋅* cross track error: how far off the robot is perpendicularly from its target position
-⋅⋅* angle error: how far off the robot is from its target angle in radians
+ + lag error: how far off in front or backwards the robot is from its target position
+ + cross track error: how far off the robot is perpendicularly from its target position
+ + angle error: how far off the robot is from its target angle in radians
 + left and right motor powers
 
 This program also allows you to find some PID constants.
