@@ -10,15 +10,15 @@ This program is meant to visualise the logs created by Walton Robotics
 includes a custom PID loop and motions that are easy to utilize.
 ### What it can do
 This program allows for the visualization of the:
-+ actual path the robot took,
-+ path the robot should have taken,
-+ actual robot velocity,
-+ target robot velocity,
-+ errors:
- + lag error: how far off in front or backwards the robot is from its target position
- + cross track error: how far off the robot is perpendicularly from its target position
- + angle error: how far off the robot is from its target angle in radians
-+ left and right motor powers
+* actual path the robot took,
+* path the robot should have taken,
+* actual robot velocity,
+* target robot velocity,
+* errors:
+  * lag error: how far off in front or backwards the robot is from its target position
+  * cross track error: how far off the robot is perpendicularly from its target position
+  * angle error: how far off the robot is from its target angle in radians
+* left and right motor powers
 
 This program also allows you to find some PID constants.
 PID constants are used to tune the feedback loop in order to make the motion as accurate as possible. Finding the
