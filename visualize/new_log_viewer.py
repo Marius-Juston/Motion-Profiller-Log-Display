@@ -269,7 +269,7 @@ class Plot(object):
 
     def show(self):
         """
-
+Displays the figure in tight_layout.
         :return:
         """
         self.grid.tight_layout(self.fig)
@@ -277,16 +277,15 @@ class Plot(object):
 
     def close_all(self):
         """
-
+Closes the figure.
         :return:
         """
         plt.close(self.fig)
 
     def place_powers(self, current_file: np.ndarray) -> None:
         """
-
+Places the motor powers in the powers Axes. Places the right power and the left power. The x axis is time.
         :param current_file:
-        :return:
         """
         time = current_file["Time"]
         time -= time.min()
@@ -300,9 +299,9 @@ class Plot(object):
 
     def place_errors(self, current_file: np.ndarray) -> None:
         """
-
-        :param current_file:
-        :return:
+Places the errors (lag error:lagE, cross track error:XTE and the angle error:angleE) in the errors Axes. Time is in the
+x axis.
+        :param current_file: the data to use to plot the errors
         """
         time = current_file["Time"]
         time -= time.min()
@@ -319,9 +318,8 @@ class Plot(object):
 
     def place_velocities(self, current_file: np.ndarray) -> None:
         """
-
-        :param current_file:
-        :return:
+Places the velocities in the velocities Axes, plots the actual and target velocities with time as the x axis.
+        :param current_file: the data to use to plot the velocities
         """
         time = current_file["Time"]
         time -= time.min()
@@ -338,9 +336,8 @@ class Plot(object):
 
     def place_path(self, current_file: np.ndarray) -> None:
         """
-
-        :param current_file:
-        :return:
+Places the path in the path Axes, plots the actual and target path.
+        :param current_file: the data to use to plot the path
         """
         x_target = current_file["xTarget"]
         max_range, max_x_center = get_range_middle(x_target)
@@ -374,22 +371,21 @@ class Plot(object):
 
     def clear_axis(self):
         """
-
-        :return:
+Clear the axis that need to be cleared when changing data.
         """
         for ax in (self.paths, self.powers, self.velocities, self.errors):
             ax.cla()
 
     def show_grid(self):
         """
-
+Shows the grids for the major ticks in the plot.
         """
         for ax in (self.paths, self.powers, self.velocities, self.errors):
             ax.grid(True)
 
     def stop_all_animations(self):
         """
-
+Stops all the animations.
         :return:
         """
         if len(self.animations) > 0:
@@ -431,20 +427,20 @@ class RobotMovement(object):
 
     def set_interval(self, time: float) -> None:
         """
-Sets the timer interval
+Sets the timer interval.
         :param time: interval in seconds
         """
         self.animation.event_source.interval = time * 1000
 
     def enable_animation(self):
         """
-Recreates a mouse listener
+Recreates a mouse listener.
         """
         self.cid = self.ax.figure.canvas.callbacks.connect('button_press_event', self)
 
     def restart_animation(self):
         """
-Restarts the animation. Stops the animation, disconnects its current mouse listener then creates a new listener
+Restarts the animation. Stops the animation, disconnects its current mouse listener then creates a new listener.
         """
         self.stop_animation()
         self.disconnect()
@@ -452,7 +448,8 @@ Restarts the animation. Stops the animation, disconnects its current mouse liste
 
     def animate(self, i: int) -> iter:
         """
-Method that is run during the animation, this method updates the patch locations and sets the timer interval to be correct
+Method that is run during the animation, this method updates the patch locations and sets the timer interval to be
+correct.
         :param i: the index in the animation the animation is currently at
         :return: the patches in the animation to be drawn
         """
@@ -468,7 +465,7 @@ Method that is run during the animation, this method updates the patch locations
 
     def set_patch_location(self, i: int) -> None:
         """
-Sets the location of the patches given its current index in the animation. Sets the x,y and angle coordinates
+Sets the location of the patches given its current index in the animation. Sets the x,y and angle coordinates.
         :param i: index of the animation is at
         """
         for robots, angle_indicator, key in zip(self.rectangles, self.arrows, ("actual", "target")):
@@ -484,7 +481,7 @@ Sets the location of the patches given its current index in the animation. Sets 
 
     def create_patches(self):
         """
-Creates the patches that will used during the animation
+Creates the patches that will used during the animation.
         :return: the patches that will used during the animation
         """
         starting_xy = (0, 0)
@@ -509,7 +506,7 @@ Creates the patches that will used during the animation
 
     def set_patch_visibility(self, is_visible: bool) -> None:
         """
-Sets the patch visibility
+Sets the patch visibility.
         :param is_visible: True means visible, False means not visible
         """
         for patch in self.patches:
@@ -517,7 +514,7 @@ Sets the patch visibility
 
     def stop_animation(self):
         """
-Stops the animation running by stopping the event_source, setting the patch visibility to False, deleting the animation
+Stops the animation running by stopping the event_source, setting the patch visibility to False, deleting the animation.
         """
         if len(self.rectangles) != 0 and self.playing:
             self.set_patch_visibility(False)
@@ -527,13 +524,13 @@ Stops the animation running by stopping the event_source, setting the patch visi
 
     def disconnect(self):
         """
-Disconnects the mouse click listener that was created by this class
+Disconnects the mouse click listener that was created by this class.
         """
         self.ax.figure.canvas.mpl_disconnect(self.cid)
 
     def __call__(self, event: MouseEvent) -> None:
         """
-This is called when you click with your mouse on the current figure
+This is called when you click with your mouse on the current figure.
         :param event: the mouse event containing information about the mouse when calling this method
         """
         ax = event.inaxes
@@ -555,7 +552,7 @@ This is called when you click with your mouse on the current figure
 
 def main(open_path):
     """
-This is the main loop which runs until the user no selects any file
+This is the main loop which runs until the user no selects any file.
     :param open_path: the default location to start your search
     :return: the ending location the folder search was looking at
     """
