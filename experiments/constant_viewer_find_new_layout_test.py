@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
+from mpl_toolkits.mplot3d import Axes3D
 
 fig = plt.figure()
 gs = GridSpec(3, 4, fig)
