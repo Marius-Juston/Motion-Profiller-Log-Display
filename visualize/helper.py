@@ -11,7 +11,14 @@ from sklearn.exceptions import NotFittedError
 from visualize import DELIMITER, DTYPE, ENCODING, COLUMNS
 
 
-def rotate_points_around_point(points, point, angle):
+def rotate_points_around_point(points: np.ndarray, angle: float, point: iter = (0, 0)) -> np.ndarray:
+    """
+Rotates an array of points a certain angle in radians around a point
+    :param points: the points to rotate
+    :param angle: the angle in radians the points should be rotated by
+    :param point: the point to rotate around
+    :return: the array of points that have been rotated
+    """
     rotated_points = points[:]
 
     rotated_points -= point
@@ -22,21 +29,21 @@ def rotate_points_around_point(points, point, angle):
     return rotated_points
 
 
-def get_data(file):
+def get_data(file) -> np.ndarray:
     """
-
-    :param file:
-    :return:
+Retrieves the data from the csv log file.
+    :param file: the file to retrieve the data from
+    :return: the data in an dictionary with as keys the first row in the csv file
     """
     return np.genfromtxt(file, delimiter=DELIMITER, dtype=DTYPE, names=True, encoding=ENCODING)
 
 
 def plot_hyperplane(clf, ax):
     """
-
-    :param clf:
-    :param ax:
-    :return:
+Plots the hyperplane of the model in an axes
+    :param clf: the classifier to use to find the hyperplane
+    :param ax: the axes to plot the hyperplane into
+    :return: the mesh of the created hyperplane that was added to the axes
     """
     # get the separating hyperplane
     interval = .1
@@ -52,7 +59,10 @@ def plot_hyperplane(clf, ax):
     zz = np.linspace(z_min, z_max, interval)
     yy, xx, zz = np.meshgrid(yy, xx, zz)
 
-    z = clf.decision_function(np.c_[xx.ravel(), yy.ravel(), zz.ravel()])
+    if hasattr(clf, "decision_function"):
+        z = clf.decision_function(np.c_[xx.ravel(), yy.ravel(), zz.ravel()])
+    else:
+        z = clf.predict_proba(np.c_[xx.ravel(), yy.ravel(), zz.ravel()])[:, 1]
     z = z.reshape(xx.shape)
 
     verteces, faces, _, _ = measure.marching_cubes(z, 0)
@@ -71,11 +81,11 @@ def plot_hyperplane(clf, ax):
 
 def get_velocity(time: np.ndarray, file_data: np.ndarray, actual: bool = True) -> np.ndarray:
     """
-
-    :param time:
-    :param file_data:
-    :param actual:
-    :return:
+Returns an array of the velocities given the time and the x,y coordinates
+    :param time: the time array
+    :param file_data: the data where the x and y coordinates are stored
+    :param actual: if returns the "xActual", "yActual" velocity or the "xTarget", "yTarget" velocity
+    :return: an array of velocities
     """
     previous_data = np.roll(file_data, 1)
 
@@ -95,10 +105,10 @@ def get_velocity(time: np.ndarray, file_data: np.ndarray, actual: bool = True) -
 
 def get_acceleration(time: np.ndarray, velocity: np.ndarray) -> np.ndarray:
     """
-
-    :param time:
-    :param velocity:
-    :return:
+Returns an array of the velocities given the time and the x,y coordinates
+    :param time: the time array
+    :param velocity: the velocity array to ue to find the acceleration
+    :return: an array with the accelerations
     """
     previous_velocity = np.roll(velocity, 1)
     previous_time = np.roll(time, 1)
@@ -110,13 +120,13 @@ def get_acceleration(time: np.ndarray, velocity: np.ndarray) -> np.ndarray:
 
 def get_coordinates_at_center(x_current, y_current, height, width, angle):
     """
-
-    :param x_current:
-    :param y_current:
-    :param height:
-    :param width:
-    :param angle:
-    :return:
+Returns the x,y coordinates the object should be at to have its position at its center given its angle
+    :param x_current: the current x coordinate
+    :param y_current: the current y coordinate
+    :param height: the height of the object
+    :param width: the width of the object
+    :param angle: the angle the object is at
+    :return: the x,y coordinate to be at the center
     """
     angle = np.math.atan2((height / 2), (width / 2)) + np.deg2rad(angle)
 
@@ -133,10 +143,10 @@ def get_coordinates_at_center(x_current, y_current, height, width, angle):
 
 def is_valid_log(file: np.ndarray, headers: iter = COLUMNS) -> bool:
     """
-
-    :param file:
-    :param headers:
-    :return:
+Checks if the log is valid (has the needed columns headers)
+    :param file: the file to check if it has all of the required headers
+    :param headers: the headers needed
+    :return: True if it has all the headers False otherwise
     """
     fields = file.dtype.fields.keys()
 
@@ -145,18 +155,18 @@ def is_valid_log(file: np.ndarray, headers: iter = COLUMNS) -> bool:
 
 def contains_key(file: np.ndarray, key: str) -> bool:
     """
-
-    :param file:
-    :param key:
-    :return:
+Looks in the file to check if it has the key inside of it
+    :param file: the file to check
+    :param key: the key to look for
+    :return: True if the file contains the key False otherwise
     """
     return key in file.dtype.fields.keys()
 
 
 def sort_files(csv_files: dict) -> iter:
     """
-    Returns a sorted list of keys. The dates will be sorted first and with latest first then
-    the non date objects are added and sorted alphabetically
+Returns a sorted list of keys. The dates will be sorted first and with latest first then
+the non date objects are added and sorted alphabetically
     :param csv_files: the dictionary to have the keys sorted
     :return: a list with the keys for the dictionary sorted
     """
@@ -177,9 +187,9 @@ def sort_files(csv_files: dict) -> iter:
 
 def find_largest_factor(x):
     """
-
-    :param x:
-    :return:
+Finds the largest factor of x
+    :param x: the number to look for the largest factorial
+    :return: the largest factorial in x
     """
     i = math.ceil(math.sqrt(x))
     while i >= 1:
@@ -192,11 +202,11 @@ def find_largest_factor(x):
     return int(i)
 
 
-def set_visible(patches, value):
+def set_visible(patches: iter, value: bool) -> None:
     """
-
-    :param patches:
-    :param value:
+Sets the matplotlib patch visibility to be either on or off.
+    :param patches: the list of matplotlib patches
+    :param value: True for being visible False otherwise
     """
     for patch in patches:
         patch.set_visible(value)
@@ -204,22 +214,22 @@ def set_visible(patches, value):
 
 def is_empty_model(clf):
     """
-
-    :param clf:
-    :return:
+Checks if a model has been fitted yet or not
+    :param clf: the model to check if it has been fitted yet or not
+    :return: True if it has not yet been fitted, False otherwise
     """
     try:
-        clf.predict([[0, 0, 0]])
+        clf.predict([[0]])
         return False
     except NotFittedError:
         return True
 
 
-def get_range_median(data: np.ndarray) -> (float, float):
+def get_range_middle(data: np.ndarray) -> (float, float):
     """
-
-    :param data:
-    :return:
+Returns the range and the middle of the data ((max + min) / 2)
+    :param data: the array to find the data from
+    :return: the range (max - min) and the center of the data ((max + min) / 2)
     """
     min_value = data.min()
     max_value = data.max()
@@ -229,9 +239,8 @@ def get_range_median(data: np.ndarray) -> (float, float):
 
 def view_subplot_legends(*args: Axes) -> None:
     """
-
-    :param args:
-    :return:
+Shows the legends for the Axes
+    :param args: the axes to show the legends
     """
     for subplot in args:
         handles, labels = subplot.get_legend_handles_labels()

@@ -15,7 +15,7 @@ from matplotlib.widgets import Button
 
 import visualize
 from visualize.helper import get_data, is_valid_log, sort_files, get_velocity, get_coordinates_at_center, \
-    contains_key, get_range_median, view_subplot_legends, rotate_points_around_point
+    contains_key, get_range_middle, view_subplot_legends, rotate_points_around_point
 
 NEEDED_KEYS = (
     "Time", "lagE", "xActual", "xTarget", "pRight", "pLeft", "yTarget", "yActual", "XTE", "angleE",
@@ -78,7 +78,7 @@ class DirectionalArrow(FancyArrow):
             angle = np.radians(angle)
         rotate_angle = self.angle - angle
 
-        rotated_points = rotate_points_around_point(self.get_xy(), self.center_xy, rotate_angle)
+        rotated_points = rotate_points_around_point(self.get_xy(), rotate_angle, self.center_xy)
         self.set_xy(rotated_points)
 
         self.angle = angle
@@ -343,22 +343,22 @@ class Plot(object):
         :return:
         """
         x_target = current_file["xTarget"]
-        max_range, max_x_center = get_range_median(x_target)
+        max_range, max_x_center = get_range_middle(x_target)
 
         y_target = current_file["yTarget"]
-        range_1, max_y_center = get_range_median(y_target)
+        range_1, max_y_center = get_range_middle(y_target)
         max_range = max(max_range, range_1)
 
         x_actual = current_file["xActual"]
 
-        range_1, x_center = get_range_median(x_actual)
+        range_1, x_center = get_range_middle(x_actual)
 
         if max_range < range_1:
             max_x_center = x_center
             max_range = range_1
 
         y_actual = current_file["yActual"]
-        range_1, y_center = get_range_median(y_actual)
+        range_1, y_center = get_range_middle(y_actual)
 
         if max_range < range_1:
             max_y_center = y_center
