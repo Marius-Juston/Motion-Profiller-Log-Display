@@ -38,15 +38,15 @@ Retrieves the data from the csv log file.
     return np.genfromtxt(file, delimiter=DELIMITER, dtype=DTYPE, names=True, encoding=ENCODING)
 
 
-def plot_hyperplane(clf, ax):
+def plot_hyperplane(clf, ax, interval=.1):
     """
 Plots the hyperplane of the model in an axes
     :param clf: the classifier to use to find the hyperplane
     :param ax: the axes to plot the hyperplane into
+    :param interval: the precision of the the hyperplane rendering.
     :return: the mesh of the created hyperplane that was added to the axes
     """
     # get the separating hyperplane
-    interval = .1
     interval = int(1 / interval)
 
     x_min, x_max = ax.get_xlim()
