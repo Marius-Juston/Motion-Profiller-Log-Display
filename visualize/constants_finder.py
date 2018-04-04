@@ -12,27 +12,7 @@ from sklearn.svm import SVC
 
 import visualize
 from visualize import MODEL_FILE, MODEL_DATA_FILE, DTYPE, OUTLIER, ACCELERATING, DECELERATING
-from visualize.helper import is_empty_model, is_valid_log, get_data, plot_hyperplane
-
-
-def get_features(file_data):
-    """
-
-    :param file_data:
-    :return:
-    """
-    average_power = (file_data["pLeft"] + file_data["pRight"]) / 2.0
-
-    time = file_data["Time"]
-    previous_data = np.roll(file_data, 1)
-    velocity = np.sqrt(
-        (file_data["xActual"] - previous_data["xActual"]) ** 2 + (
-                file_data["yActual"] - previous_data["yActual"]) ** 2) / (time - previous_data["Time"])
-
-    velocity[0] = 0
-
-    x = np.concatenate((np.vstack(average_power), np.vstack(velocity), np.vstack(time)), 1)
-    return x
+from visualize.helper import is_empty_model, is_valid_log, get_data, plot_hyperplane, get_features
 
 
 def get_labels(file_data):
@@ -73,7 +53,7 @@ def find_constants(open_path):
     ax3d = Axes3D(fig)
     fig, ax2d = plt.subplots(1, 1, num="Fitted data")
 
-    plt.ion()
+    # plt.ion()
 
     while True:
         file = easygui.fileopenbox('Please locate csv file', 'Specify File', default=open_path, filetypes='*.csv')
@@ -124,7 +104,7 @@ def find_gain(clf, file_data, is_data=False, ax3d=None, ax2d=None):
     if not is_data:
         file_data = np.genfromtxt(file_data, delimiter=',', dtype=DTYPE, names=True)
 
-    x = get_features(file_data)
+    x, _ = get_features(file_data)
     x = x[file_data["motionState"] == 'MOVING']
 
     out = IsolationForest(n_jobs=-1, random_state=0)
@@ -181,18 +161,6 @@ def find_gain(clf, file_data, is_data=False, ax3d=None, ax2d=None):
                 ax2d.plot((y_lim - i) / c, y_lim)
 
     return k_v, k_k, k_acc
-
-
-def find_linear_best_fit_line(x, y):
-    """
-
-    :param x:
-    :param y:
-    :return:
-    """
-    m, b = np.polyfit(x, y, 1)
-
-    return m, b
 
 
 def create_blank_classifier():
@@ -263,7 +231,7 @@ def train_model(open_path):
 
             # TODO make this loop thought the steps as many times as they are number of paths
             if is_valid_log(file_data):
-                x = get_features(file_data)
+                x, _ = get_features(file_data)
                 y = get_labels(file_data)
 
                 x = x[file_data["motionState"] == 'MOVING']

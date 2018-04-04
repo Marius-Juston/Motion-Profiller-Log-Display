@@ -1,6 +1,7 @@
 # coding=utf-8
 import math
 from datetime import datetime
+from itertools import combinations
 
 import numpy as np
 from matplotlib.axes import Axes
@@ -9,6 +10,25 @@ from skimage import measure
 from sklearn.exceptions import NotFittedError
 
 from visualize import DELIMITER, DTYPE, ENCODING, COLUMNS
+
+
+def find_linear_best_fit_line(x, y):
+    """
+
+    :param x:
+    :param y:
+    :return:
+    """
+    m, b = np.polyfit(x, y, 1)
+
+    return m, b
+
+
+def plot_subplots(features, translation, subplots, labels=None):
+    for combination, subplot in zip(combinations(list(_ for _ in range(features.shape[1])), 2), subplots):
+        subplot.scatter(features[:, combination[1]], features[:, combination[0]], c=labels)
+        subplot.set_xlabel(translation[combination[1]])
+        subplot.set_ylabel(translation[combination[0]])
 
 
 def rotate_points_around_point(points: np.ndarray, angle: float, point: iter = (0, 0)) -> np.ndarray:
@@ -46,9 +66,10 @@ Plots the hyperplane of the model in an axes
     :param interval: the precision of the the hyperplane rendering.
     :return: the mesh of the created hyperplane that was added to the axes
     """
-    # get the separating hyperplane
+
     interval = int(1 / interval)
 
+    # get the separating hyperplane
     x_min, x_max = ax.get_xlim()
     y_min, y_max = ax.get_ylim()
     z_min, z_max = ax.get_zlim()
@@ -57,6 +78,7 @@ Plots the hyperplane of the model in an axes
     xx = np.linspace(x_min, x_max, interval)
     yy = np.linspace(y_min, y_max, interval)
     zz = np.linspace(z_min, z_max, interval)
+
     yy, xx, zz = np.meshgrid(yy, xx, zz)
 
     if hasattr(clf, "decision_function"):
@@ -219,10 +241,30 @@ Checks if a model has been fitted yet or not
     :return: True if it has not yet been fitted, False otherwise
     """
     try:
-        clf.predict([[0]])
+        clf.predict([[0, 0, 0]])
         return False
     except NotFittedError:
         return True
+
+
+def get_features(file_data):
+    """
+
+    :param file_data:
+    :return:
+    """
+    average_power = (file_data["pLeft"] + file_data["pRight"]) / 2.0
+
+    time = file_data["Time"]
+    previous_data = np.roll(file_data, 1)
+    velocity = np.sqrt(
+        (file_data["xActual"] - previous_data["xActual"]) ** 2 + (
+                file_data["yActual"] - previous_data["yActual"]) ** 2) / (time - previous_data["Time"])
+
+    velocity[0] = 0
+
+    x = np.concatenate((np.vstack(average_power), np.vstack(velocity), np.vstack(time)), 1)
+    return x, {0: 'Average Power', 1: 'Velocity', 2: 'Time'}
 
 
 def get_range_middle(data: np.ndarray) -> (float, float):
