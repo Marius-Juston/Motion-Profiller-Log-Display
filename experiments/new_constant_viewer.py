@@ -117,7 +117,7 @@ class ConstantViewer(object):
 
         # self.master_plot.scatter(outliers[:,0], outliers[:, 1], outliers[:, 2], c="black")
 
-        plot_subplots(features, headers, (self.time_velocity, self.time_power, self.power_velocity))
+        plot_subplots(features, headers, (self.time_velocity, self.time_power, self.power_velocity), color_labels)
 
         # self.show_grid()
         plt.draw()
