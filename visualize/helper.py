@@ -83,18 +83,21 @@ Plots the hyperplane of the model in an axes
 
     if hasattr(clf, "decision_function"):
         z = clf.decision_function(np.c_[xx.ravel(), yy.ravel(), zz.ravel()])
-    else:
+    elif hasattr(clf, "predict_proba"):
         z = clf.predict_proba(np.c_[xx.ravel(), yy.ravel(), zz.ravel()])[:, 1]
+    else:
+        # TODO  find out how to find the hyperplanes for unsupervised learning algorithms
+        z = clf.transform(np.c_[xx.ravel(), yy.ravel(), zz.ravel()])
     z = z.reshape(xx.shape)
 
-    verteces, faces, _, _ = measure.marching_cubes(z, 0)
+    vertices, faces, _, _ = measure.marching_cubes(z, 0)
     # Scale and transform to actual size of the interesting volume
-    verteces = verteces * [x_max - x_min, y_max - y_min, z_max - z_min] / interval
-    verteces += [x_min, y_min, z_min]
+    vertices = vertices * [x_max - x_min, y_max - y_min, z_max - z_min] / interval
+    vertices += [x_min, y_min, z_min]
     # and create a mesh to display
-    # mesh = Poly3DCollection(verteces[faces],
+    # mesh = Poly3DCollection(vertices[faces],
     #                         facecolor='orange', alpha=0.3)
-    mesh = Line3DCollection(verteces[faces],
+    mesh = Line3DCollection(vertices[faces],
                             facecolor='orange', alpha=0.3)
     ax.add_collection3d(mesh)
 
@@ -234,7 +237,7 @@ Sets the matplotlib patch visibility to be either on or off.
         patch.set_visible(value)
 
 
-def is_empty_model(clf):
+def is_empty_model(clf) -> bool:
     """
 Checks if a model has been fitted yet or not
     :param clf: the model to check if it has been fitted yet or not

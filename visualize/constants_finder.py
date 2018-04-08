@@ -12,7 +12,8 @@ from sklearn.svm import SVC
 
 import visualize
 from visualize import MODEL_FILE, MODEL_DATA_FILE, DTYPE, OUTLIER, ACCELERATING, DECELERATING
-from visualize.helper import is_empty_model, is_valid_log, get_data, plot_hyperplane, get_features
+from visualize.helper import is_empty_model, is_valid_log, get_data, plot_hyperplane, get_features, \
+    find_linear_best_fit_line
 
 
 def get_labels(file_data):

@@ -4,9 +4,9 @@ import easygui
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.gridspec import GridSpec
-from sklearn.ensemble import IsolationForest
 from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.svm import OneClassSVM
 
 import visualize
 from visualize import MODEL_FILE
@@ -21,6 +21,10 @@ class ConstantViewer(object):
 
         self.clf = clf
         self.fig = plt.figure("Scaled 3d data")
+
+        fig_manager = plt.get_current_fig_manager()
+        fig_manager.window.showMaximized()
+
         self.gs = GridSpec(3, 4, self.fig)
         self.showing = False
         # Axes3D()
@@ -32,8 +36,6 @@ class ConstantViewer(object):
     def show(self):
         if not self.showing:
             self.gs.tight_layout(self.fig)
-            fig_manager = plt.get_current_fig_manager()
-            fig_manager.window.showMaximized()
 
             self.fig.show()
             # plt.show()
@@ -55,15 +57,12 @@ class ConstantViewer(object):
 
     def manipulate_features(self, features: np.ndarray, file_data: np.ndarray) -> (np.ndarray, np.ndarray):
         min_max_scaler = MinMaxScaler()
-        isolation_forest = IsolationForest(n_jobs=-1)
 
-        print(file_data["pathNumber"].max())
         moving_mask = file_data["motionState"] == "MOVING"
         features = features[moving_mask]
         file_data = file_data[moving_mask]
 
         new_features = None
-        outliers = None
 
         # for i in range(5, 6):
         for i in range(file_data["pathNumber"].min(), file_data["pathNumber"].max() + 1):
@@ -81,8 +80,8 @@ class ConstantViewer(object):
             features_at_path = min_max_scaler.fit_transform(features_at_path)
             outliers_free_features = features_at_path
 
-            # isolation_forest.fit(features_at_path)
-            # outlier_prediction = isolation_forest.predict(features_at_path)
+            # outlier_detector.fit(features_at_path)
+            # outlier_prediction = outlier_detector.predict(features_at_path)
             # outliers_free_features = features_at_path[outlier_prediction == 1]
             #
             # if outliers is None:
@@ -95,29 +94,37 @@ class ConstantViewer(object):
             else:
                 new_features = np.concatenate((new_features, outliers_free_features), 0)
 
-        isolation_forest.fit(new_features)
-        outlier_prediction = isolation_forest.predict(new_features)
+        # outlier_detector = IsolationForest(contamination=.1, n_jobs=-1)
+        outlier_detector = OneClassSVM(gamma=10)
+        # outlier_detector = OneClassSVM()
+        # outlier_detector = OneClassSVM(random_state=0)
+
+        outlier_detector.fit(new_features)
+        outlier_prediction = outlier_detector.predict(new_features)
         outliers = new_features[outlier_prediction == -1]
-
         new_features = new_features[outlier_prediction == 1]
-
-        return new_features, outliers
+        # plot_hyperplane(outlier_detector, self.master_plot, interval=.04)
+        return new_features, outliers, min_max_scaler
 
     def graph(self, file_data):
         self.clear_graphs()
 
         features, headers = get_features(file_data)
 
-        features, outliers = self.manipulate_features(features, file_data)
+        new_features, outliers, scaler = self.manipulate_features(features, file_data)
+        features = scaler.inverse_transform(new_features)
 
-        labels = self.clf.predict(features)
+        # labels = cluster.DBSCAN(.1, n_jobs=-1).fit_predict(features) # Works
+        labels = self.clf.predict(new_features)
         color_labels = list(map(lambda x: 'r' if x == 0 else 'b', labels))
 
-        self.plot_3d_plot(features, headers, color_labels)
+        self.plot_3d_plot(new_features, headers, color_labels)
 
-        # self.master_plot.scatter(outliers[:,0], outliers[:, 1], outliers[:, 2], c="black")
+        self.master_plot.scatter(outliers[:, 0], outliers[:, 1], outliers[:, 2], c="black")
 
-        plot_subplots(features, headers, (self.time_velocity, self.time_power, self.power_velocity), color_labels)
+        self.show_constants_graph(features, labels, c=color_labels)
+
+        plot_subplots(new_features, headers, (self.time_velocity, self.time_power, self.power_velocity), color_labels)
 
         # self.show_grid()
         plt.draw()
@@ -132,6 +139,41 @@ class ConstantViewer(object):
         """
         for ax in (self.time_velocity, self.time_power, self.power_velocity):
             ax.grid(True)
+
+    def show_constants_graph(self, features, labels, c=None):
+        figure = plt.figure("Constants graph")
+        constants_plot = figure.gca()
+        constants_plot.set_xlabel("Velocity")
+        constants_plot.set_ylabel("Average Power")
+
+        fig_manager = plt.get_current_fig_manager()
+        fig_manager.window.showMaximized()
+
+        x = features[:, 1]
+        y = features[:, 0]
+
+        constants_plot.scatter(x, y, c=labels if c is None else c)
+
+        coef_accelerating, intercept_accelerating = find_linear_best_fit_line(x[labels == 0], y[labels == 0])
+        coef_decelerating, intercept_decelerating = find_linear_best_fit_line(x[labels == 1], y[labels == 1])
+
+        x_lim = np.array(constants_plot.get_xlim())
+        y_lim = np.array(constants_plot.get_ylim())
+
+        constants_plot.plot(x_lim, coef_accelerating * x_lim + intercept_accelerating)
+        constants_plot.plot(x_lim, coef_decelerating * x_lim + intercept_decelerating)
+
+        average_coef = (coef_accelerating + coef_decelerating) / 2
+        average_intercept = (intercept_accelerating + intercept_decelerating) / 2
+        constants_plot.plot(x_lim, average_coef * x_lim + average_intercept)
+
+        acceleration_coefficient = (coef_accelerating - average_coef)
+        acceleration_intercept = (intercept_accelerating - average_intercept)
+        k_acc = ((x.max() + x.min()) / 2) * acceleration_coefficient + acceleration_intercept
+
+        bbox_props = dict(boxstyle="round,pad=0.3", fc="cyan", ec="b", lw=2)
+        constants_plot.text(x_lim[0], y_lim[1], "kV: {}\nkK: {}\nkAcc: {}".format(average_coef, average_intercept, k_acc), ha="left",
+                            va="top", bbox=bbox_props)
 
 
 def find_constants(open_path):
