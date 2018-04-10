@@ -227,6 +227,8 @@ Finds the largest factor of x
     return int(i)
 
 
+
+
 def set_visible(patches: iter, value: bool) -> None:
     """
 Sets the matplotlib patch visibility to be either on or off.
@@ -290,3 +292,15 @@ Shows the legends for the Axes
     for subplot in args:
         handles, labels = subplot.get_legend_handles_labels()
         subplot.legend(handles, labels)
+        
+def retrieve_parameters(clf):
+    parameters = {}
+
+    for parameter_name, parameter_default_value in clf.get_params().items():
+        if parameter_default_value is not None:
+            parameter_type = type(parameter_default_value)
+
+            if any([parameter_type is available_type for available_type in (int, float, str, bool)]):
+                parameters[parameter_name] = parameter_default_value
+
+    return parameters
