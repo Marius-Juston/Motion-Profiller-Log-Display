@@ -16,11 +16,12 @@ from visualize.helper import is_empty_model, is_valid_log, get_data, get_feature
 
 class ConstantViewer(object):
 
-    def __init__(self, clf) -> None:
+    def __init__(self, clf, show_outliers: bool = False) -> None:
         super().__init__()
 
+        self.show_outliers = show_outliers
         self.clf = clf
-        self.fig = plt.figure("Scaled 3d data")
+        self.fig = plt.figure("Scaled 3d  data")
 
         fig_manager = plt.get_current_fig_manager()
         fig_manager.window.showMaximized()
@@ -53,7 +54,7 @@ class ConstantViewer(object):
         self.master_plot.set_ylabel(headers[1])
         self.master_plot.set_zlabel(headers[2])
 
-        plot_hyperplane(self.clf, self.master_plot)
+        plot_hyperplane(self.clf, self.master_plot, colors='orange')
 
     def manipulate_features(self, features: np.ndarray, file_data: np.ndarray) -> (np.ndarray, np.ndarray):
         min_max_scaler = MinMaxScaler()
@@ -95,7 +96,7 @@ class ConstantViewer(object):
                 new_features = np.concatenate((new_features, outliers_free_features), 0)
 
         # outlier_detector = IsolationForest(contamination=.1, n_jobs=-1)
-        outlier_detector = OneClassSVM(gamma=10)
+        outlier_detector = OneClassSVM(gamma=10)  # Seems to work best
         # outlier_detector = OneClassSVM()
         # outlier_detector = OneClassSVM(random_state=0)
 
@@ -103,7 +104,10 @@ class ConstantViewer(object):
         outlier_prediction = outlier_detector.predict(new_features)
         outliers = new_features[outlier_prediction == -1]
         new_features = new_features[outlier_prediction == 1]
-        # plot_hyperplane(outlier_detector, self.master_plot, interval=.04)
+
+        if self.show_outliers:
+            plot_hyperplane(outlier_detector, self.master_plot, interval=.04, colors="orange")
+
         return new_features, outliers, min_max_scaler
 
     def graph(self, file_data):
@@ -120,7 +124,8 @@ class ConstantViewer(object):
 
         self.plot_3d_plot(new_features, headers, color_labels)
 
-        self.master_plot.scatter(outliers[:, 0], outliers[:, 1], outliers[:, 2], c="black")
+        if self.show_outliers:
+            self.master_plot.scatter(outliers[:, 0], outliers[:, 1], outliers[:, 2], c="black")
 
         self.show_constants_graph(features, labels, c=color_labels)
 
@@ -172,7 +177,8 @@ class ConstantViewer(object):
         k_acc = ((x.max() + x.min()) / 2) * acceleration_coefficient + acceleration_intercept
 
         bbox_props = dict(boxstyle="round,pad=0.3", fc="cyan", ec="b", lw=2)
-        constants_plot.text(x_lim[0], y_lim[1], "kV: {}\nkK: {}\nkAcc: {}".format(average_coef, average_intercept, k_acc), ha="left",
+        constants_plot.text(x_lim[0], y_lim[1],
+                            "kV: {}\nkK: {}\nkAcc: {}".format(average_coef, average_intercept, k_acc), ha="left",
                             va="top", bbox=bbox_props)
 
 
