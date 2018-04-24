@@ -19,6 +19,7 @@ class ConstantViewer(object):
     def __init__(self, clf, show_outliers: bool = False) -> None:
         super().__init__()
 
+        self.showing = False
         self.show_outliers = show_outliers
         self.clf = clf
         self.fig = plt.figure("Scaled 3d  data")
@@ -27,8 +28,7 @@ class ConstantViewer(object):
         fig_manager.window.showMaximized()
 
         self.gs = GridSpec(3, 4, self.fig)
-        self.showing = False
-        # Axes3D()
+
         self.master_plot = self.fig.add_subplot(self.gs[:3, :3], projection='3d')
         self.time_velocity = self.fig.add_subplot(self.gs[0, -1])
         self.time_power = self.fig.add_subplot(self.gs[1, -1])
@@ -39,11 +39,9 @@ class ConstantViewer(object):
             self.gs.tight_layout(self.fig)
 
             self.fig.show()
-            # plt.show()
             self.showing = True
 
     def close_all(self):
-        # self.fig.hide()
         if self.showing:
             self.showing = False
             plt.close(self.fig)
@@ -65,7 +63,6 @@ class ConstantViewer(object):
 
         new_features = None
 
-        # for i in range(5, 6):
         for i in range(file_data["pathNumber"].min(), file_data["pathNumber"].max() + 1):
             path_number = file_data["pathNumber"] == i
 
@@ -81,24 +78,12 @@ class ConstantViewer(object):
             features_at_path = min_max_scaler.fit_transform(features_at_path)
             outliers_free_features = features_at_path
 
-            # outlier_detector.fit(features_at_path)
-            # outlier_prediction = outlier_detector.predict(features_at_path)
-            # outliers_free_features = features_at_path[outlier_prediction == 1]
-            #
-            # if outliers is None:
-            #     outliers = features_at_path[outlier_prediction == -1]
-            # else:
-            #     outliers= np.concatenate((outliers, features_at_path[outlier_prediction == -1]), 0)
-
             if new_features is None:
                 new_features = outliers_free_features
             else:
                 new_features = np.concatenate((new_features, outliers_free_features), 0)
 
-        # outlier_detector = IsolationForest(contamination=.1, n_jobs=-1)
         outlier_detector = OneClassSVM(gamma=10)  # Seems to work best
-        # outlier_detector = OneClassSVM()
-        # outlier_detector = OneClassSVM(random_state=0)
 
         outlier_detector.fit(new_features)
         outlier_prediction = outlier_detector.predict(new_features)
@@ -118,7 +103,6 @@ class ConstantViewer(object):
         new_features, outliers, scaler = self.manipulate_features(features, file_data)
         features = scaler.inverse_transform(new_features)
 
-        # labels = cluster.DBSCAN(.1, n_jobs=-1).fit_predict(features) # Works
         labels = self.clf.predict(new_features)
         color_labels = list(map(lambda x: 'r' if x == 0 else 'b', labels))
 
@@ -159,8 +143,12 @@ class ConstantViewer(object):
 
         constants_plot.scatter(x, y, c=labels if c is None else c)
 
-        coef_accelerating, intercept_accelerating = find_linear_best_fit_line(x[labels == 0], y[labels == 0])
-        coef_decelerating, intercept_decelerating = find_linear_best_fit_line(x[labels == 1], y[labels == 1])
+        acceleration_mask = labels == visualize.ACCELERATING
+        coef_accelerating, intercept_accelerating = find_linear_best_fit_line(x[acceleration_mask],
+                                                                              y[acceleration_mask])
+        deceleration_mask = labels == visualize.DECELERATING
+        coef_decelerating, intercept_decelerating = find_linear_best_fit_line(x[deceleration_mask],
+                                                                              y[deceleration_mask])
 
         x_lim = np.array(constants_plot.get_xlim())
         y_lim = np.array(constants_plot.get_ylim())
@@ -192,8 +180,6 @@ def find_constants(open_path):
     if is_empty_model(clf):
         easygui.msgbox("The model has not been fitted yet. Please fit data to the model.")
         return
-
-    # plt.show()
 
     while True:
         file = easygui.fileopenbox('Please locate csv file', 'Specify File', default=open_path, filetypes='*.csv')
