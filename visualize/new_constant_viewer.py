@@ -15,8 +15,15 @@ from visualize.helper import is_empty_model, is_valid_log, get_data, get_feature
 
 
 class ConstantViewer(object):
+    """
+Class meant to visualize the constants of a log file for the Motion Profiler of Walton Robotics
+    """
 
     def __init__(self, clf, show_outliers: bool = False) -> None:
+        """
+        :param clf: the model to use to separate the data
+        :param show_outliers: True if black dots should be placed in the 3d plot to represent the outliers False otherwise
+        """
         super().__init__()
 
         self.showing = False
@@ -35,6 +42,10 @@ class ConstantViewer(object):
         self.power_velocity = self.fig.add_subplot(self.gs[2, -1])
 
     def show(self):
+        """
+    Shows the figure
+        """
+
         if not self.showing:
             self.gs.tight_layout(self.fig)
 
@@ -42,11 +53,20 @@ class ConstantViewer(object):
             self.showing = True
 
     def close_all(self):
+        """
+    Closes the figure
+        """
         if self.showing:
             self.showing = False
             plt.close(self.fig)
 
     def plot_3d_plot(self, features, headers, labels):
+        """
+    PLots the features in a 3d plot including the hyperplane that separates the data
+        :param features: the features to use to plot in the graph
+        :param headers: the axis titles
+        :param labels: the color of each data point
+        """
         self.master_plot.scatter(features[:, 0], features[:, 1], features[:, 2], c=labels)
         self.master_plot.set_xlabel(headers[0])
         self.master_plot.set_ylabel(headers[1])
@@ -55,6 +75,12 @@ class ConstantViewer(object):
         plot_hyperplane(self.clf, self.master_plot, colors='orange')
 
     def manipulate_features(self, features: np.ndarray, file_data: np.ndarray) -> (np.ndarray, np.ndarray):
+        """
+    Return the features manipulated in a way as to make the algorithm for separating the data more accurate.
+        :param features: the features to use
+        :param file_data: the log file's data
+        :return: the manipulated features array, the outliers of the data set and the data scaler
+        """
         min_max_scaler = MinMaxScaler()
 
         moving_mask = file_data["motionState"] == "MOVING"
@@ -96,6 +122,11 @@ class ConstantViewer(object):
         return new_features, outliers, min_max_scaler
 
     def graph(self, file_data):
+        """
+    Graphs the features from the log file. Creates a 3D graph with time, average power to motors and velocity as axises.
+    It also decomposes the dimensions into individual 2D graphs.
+        :param file_data: the log file to use to extract the data from
+        """
         self.clear_graphs()
 
         features, headers = get_features(file_data)
@@ -115,10 +146,12 @@ class ConstantViewer(object):
 
         plot_subplots(new_features, headers, (self.time_velocity, self.time_power, self.power_velocity), color_labels)
 
-        # self.show_grid()
         plt.draw()
 
     def clear_graphs(self):
+        """
+    Clears all the axes
+        """
         for ax in (self.master_plot, self.time_velocity, self.time_power, self.power_velocity):
             ax.cla()
 
@@ -130,6 +163,14 @@ class ConstantViewer(object):
             ax.grid(True)
 
     def show_constants_graph(self, features, labels, c=None):
+        """
+    Creates an addition figure that will display the a graph with the constants on it and also the lines of best fit of
+    the accelerating portion of it, the decelerating portion of it and the average of both of those lines
+        :param features: the features to use to show the graph and find the constants from
+        :param labels: the labels to say if a data point is accelerating or not
+        :param c: the color to plot the points
+        :return the constants for the motion profiling kV, kK and kAcc
+        """
         figure = plt.figure("Constants graph")
         constants_plot = figure.gca()
         constants_plot.set_xlabel("Velocity")
@@ -169,8 +210,16 @@ class ConstantViewer(object):
                             "kV: {}\nkK: {}\nkAcc: {}".format(average_coef, average_intercept, k_acc), ha="left",
                             va="top", bbox=bbox_props)
 
+        return average_coef, average_intercept, k_acc
+
 
 def find_constants(open_path):
+    """
+This is the main loop which runs until the user no selects any file. Retrieves the saved model for separating the data.
+    :param open_path: the default location to start your search
+    :return: the ending location the folder search was looking at
+    """
+
     if not os.path.exists(MODEL_FILE):
         easygui.msgbox("There are no models to use to classify the data. Please train algorithm first.")
         return

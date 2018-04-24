@@ -81,7 +81,7 @@ Custom class for drawing an arrow in matplotlib
 
     def set_angle(self, angle, in_degrees=False):
         """
-Sets the angle of the arrow
+    Sets the angle of the arrow
         :param angle: the new angle of the arrow
         :param in_degrees: True if the angle given is in degrees if False then in radians
         """
@@ -96,7 +96,7 @@ Sets the angle of the arrow
 
     def set_center_xy(self, xy):
         """
-Sets the center of the arrow location
+    Sets the center of the arrow location
         :param xy: the new x,y center coordinate of the arrow
         """
         self.set_xy(self.get_xy() + (xy[0] - self.center_xy[0], xy[1] - self.center_xy[1]))
@@ -158,15 +158,15 @@ Class meant to plot log file data for the Motion Profiler of Walton Robotics
 
     def clear_buttons(self):
         """
-Removes the buttons from the figure
+    Removes the buttons from the figure
         """
         while len(self.buttons_axes) != 0:
             self.buttons_axes.pop().remove()
 
     def handle_key_event(self, event: KeyEvent) -> None:
         """
-Handles the key events. If the right arrow key is pressed then then it plot the next plot if it was the left arrow
-key then it plots the previous plot.
+    Handles the key events. If the right arrow key is pressed then then it plot the next plot if it was the left arrow
+    key then it plots the previous plot.
         :param event: the key event
         """
         if event.key == "right":
@@ -176,7 +176,7 @@ key then it plots the previous plot.
 
     def format_axis(self):
         """
-Sets the graphs axis labels
+    Sets the graphs axis labels
         :return: the graphs
         """
 
@@ -191,7 +191,7 @@ Sets the graphs axis labels
 
     def next_figure(self, increment: int) -> None:
         """
-Clears the axis' plots, clears the buttons and then recreates the buttons and the graphs for the next graph
+    Clears the axis' plots, clears the buttons and then recreates the buttons and the graphs for the next graph
         :param increment: -1 for the previous plot, 1 for the next plot
         """
         new_plot_index = max(min((self.current_plot_index + increment), (len(self.sorted_names) - 1)), 0)
@@ -204,10 +204,10 @@ Clears the axis' plots, clears the buttons and then recreates the buttons and th
 
     def create_buttons(self, plot_index: int) -> None:
         """
-Creates the buttons on the figure if the plot index is either the first of the last index then there will only be a
-single button only allowing you to move to either the previous or the next plot.If the plot index is in between the
-first and last index then there will be two buttons created the left one goes to the previous plot and the right one
-goes to the next plot.
+    Creates the buttons on the figure if the plot index is either the first of the last index then there will only be a
+    single button only allowing you to move to either the previous or the next plot.If the plot index is in between the
+    first and last index then there will be two buttons created the left one goes to the previous plot and the right one
+    goes to the next plot.
         :param plot_index: which log file's data to use for the graphs
         """
         if len(self.sorted_names) > 1 and self.show_buttons:
@@ -235,22 +235,22 @@ goes to the next plot.
 
     def next_plot(self, event: MouseEvent) -> None:
         """
-Plots the next log file's data
+    Plots the next log file's data
         :param event: the mouse event
         """
         self.next_figure(1)
 
     def previous_plot(self, event: MouseEvent) -> None:
         """
-Plots the previous log file's data
+    Plots the previous log file's data
         :param event: the mouse event
         """
         self.next_figure(-1)
 
     def plot_index(self, plot_index: int) -> None:
         """
-Sets up the graphs, the buttons and plots the dat on graphs for the current plot index which indicates which log
-file's data to use
+    Sets up the graphs, the buttons and plots the dat on graphs for the current plot index which indicates which log
+    file's data to use
         :param plot_index: which log file's data to use for the graphs
         """
         self.fig.canvas.set_window_title(str(self.sorted_names[plot_index]))
@@ -282,7 +282,7 @@ file's data to use
 
     def show(self):
         """
-Displays the figure in tight_layout.
+    Displays the figure in tight_layout.
         :return:
         """
         self.grid.tight_layout(self.fig)
@@ -290,14 +290,14 @@ Displays the figure in tight_layout.
 
     def close_all(self):
         """
-Closes the figure.
+    Closes the figure.
         :return:
         """
         plt.close(self.fig)
 
     def place_powers(self, current_file: np.ndarray) -> None:
         """
-Places the motor powers in the powers Axes. Places the right power and the left power. The x axis is time.
+    Places the motor powers in the powers Axes. Places the right power and the left power. The x axis is time.
         :param current_file:
         """
         time = current_file["Time"]
@@ -312,8 +312,8 @@ Places the motor powers in the powers Axes. Places the right power and the left 
 
     def place_errors(self, current_file: np.ndarray) -> None:
         """
-Places the errors (lag error:lagE, cross track error:XTE and the angle error:angleE) in the errors Axes. Time is in the
-x axis.
+    Places the errors (lag error:lagE, cross track error:XTE and the angle error:angleE) in the errors Axes.
+    Time is in the x axis.
         :param current_file: the data to use to plot the errors
         """
         time = current_file["Time"]
@@ -331,7 +331,7 @@ x axis.
 
     def place_velocities(self, current_file: np.ndarray) -> None:
         """
-Places the velocities in the velocities Axes, plots the actual and target velocities with time as the x axis.
+    Places the velocities in the velocities Axes, plots the actual and target velocities with time as the x axis.
         :param current_file: the data to use to plot the velocities
         """
         time = current_file["Time"]
@@ -340,8 +340,6 @@ Places the velocities in the velocities Axes, plots the actual and target veloci
         actual_velocity = get_velocity(time, current_file)
         target_velocity = get_velocity(time, current_file, actual=False)
 
-        # plt.text(.94, .92, "Max: {0:.4f}".format(velocity.max()), ha='center', va='center',
-        #          transform=velocities.transAxes)
         self.velocities.plot(time, actual_velocity, c="red", label="Actual max: {0:.4f}".format(actual_velocity.max()))
         self.velocities.plot(time, target_velocity, c="blue",
                              label="Target max: {0:.4f}".format(target_velocity.max()))
@@ -349,7 +347,7 @@ Places the velocities in the velocities Axes, plots the actual and target veloci
 
     def place_path(self, current_file: np.ndarray) -> None:
         """
-Places the path in the path Axes, plots the actual and target path.
+    Places the path in the path Axes, plots the actual and target path.
         :param current_file: the data to use to plot the path
         """
         x_target = current_file["xTarget"]
@@ -384,21 +382,21 @@ Places the path in the path Axes, plots the actual and target path.
 
     def clear_axis(self):
         """
-Clear the axis that need to be cleared when changing data.
+    Clear the axis that need to be cleared when changing data.
         """
         for ax in (self.paths, self.powers, self.velocities, self.errors):
             ax.cla()
 
     def show_grid(self):
         """
-Shows the grids for the major ticks in the plot.
+    Shows the grids for the major ticks in the plot.
         """
         for ax in (self.paths, self.powers, self.velocities, self.errors):
             ax.grid(True)
 
     def stop_all_animations(self):
         """
-Stops all the animations.
+    Stops all the animations.
         :return:
         """
         if len(self.animations) > 0:
@@ -440,20 +438,20 @@ The class that handles the animation of a robot given its path data
 
     def set_interval(self, time: float) -> None:
         """
-Sets the timer interval.
+    Sets the timer interval.
         :param time: interval in seconds
         """
         self.animation.event_source.interval = time * 1000
 
     def enable_animation(self):
         """
-Recreates a mouse listener.
+    Recreates a mouse listener.
         """
         self.cid = self.ax.figure.canvas.callbacks.connect('button_press_event', self)
 
     def restart_animation(self):
         """
-Restarts the animation. Stops the animation, disconnects its current mouse listener then creates a new listener.
+    Restarts the animation. Stops the animation, disconnects its current mouse listener then creates a new listener.
         """
         self.stop_animation()
         self.disconnect()
@@ -461,8 +459,8 @@ Restarts the animation. Stops the animation, disconnects its current mouse liste
 
     def animate(self, i: int) -> iter:
         """
-Method that is run during the animation, this method updates the patch locations and sets the timer interval to be
-correct.
+    Method that is run during the animation, this method updates the patch locations and sets the timer interval to be
+    correct.
         :param i: the index in the animation the animation is currently at
         :return: the patches in the animation to be drawn
         """
@@ -478,7 +476,7 @@ correct.
 
     def set_patch_location(self, i: int) -> None:
         """
-Sets the location of the patches given its current index in the animation. Sets the x,y and angle coordinates.
+    Sets the location of the patches given its current index in the animation. Sets the x,y and angle coordinates.
         :param i: index of the animation is at
         """
         for robots, angle_indicator, key in zip(self.rectangles, self.arrows, ("actual", "target")):
@@ -494,7 +492,7 @@ Sets the location of the patches given its current index in the animation. Sets 
 
     def create_patches(self):
         """
-Creates the patches that will used during the animation.
+    Creates the patches that will used during the animation.
         :return: the patches that will used during the animation
         """
         starting_xy = (0, 0)
@@ -519,7 +517,7 @@ Creates the patches that will used during the animation.
 
     def set_patch_visibility(self, is_visible: bool) -> None:
         """
-Sets the patch visibility.
+    Sets the patch visibility.
         :param is_visible: True means visible, False means not visible
         """
         for patch in self.patches:
@@ -527,7 +525,8 @@ Sets the patch visibility.
 
     def stop_animation(self):
         """
-Stops the animation running by stopping the event_source, setting the patch visibility to False, deleting the animation.
+    Stops the animation running by stopping the event_source, setting the patch visibility to False,
+    deleting the animation.
         """
         if len(self.rectangles) != 0 and self.playing:
             self.set_patch_visibility(False)
@@ -537,13 +536,13 @@ Stops the animation running by stopping the event_source, setting the patch visi
 
     def disconnect(self):
         """
-Disconnects the mouse click listener that was created by this class.
+    Disconnects the mouse click listener that was created by this class.
         """
         self.ax.figure.canvas.mpl_disconnect(self.cid)
 
     def __call__(self, event: MouseEvent) -> None:
         """
-This is called when you click with your mouse on the current figure.
+    This is called when you click with your mouse on the current figure.
         :param event: the mouse event containing information about the mouse when calling this method
         """
         ax = event.inaxes
