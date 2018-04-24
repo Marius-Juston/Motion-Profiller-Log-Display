@@ -10,6 +10,7 @@ USER_HOME_DIRECTORY = os.path.expanduser("~")
 
 MASTER_FOLDER = "{0:s}/MotionViewer/".format(USER_HOME_DIRECTORY)
 
+# Creates the folder if it does not exist
 if not os.path.exists(MASTER_FOLDER):
     os.makedirs(MASTER_FOLDER)
 

@@ -31,10 +31,9 @@ NEEDED_KEYS = (
 
 def distinguish_paths(current_file: np.ndarray, *args: Axes) -> None:
     """
-
-    :param current_file:
-    :param args:
-    :return:
+Draws colored lines to separate each path in the log file data on each plot.
+    :param current_file: the log data to use find where to separate the lines
+    :param args: the list of axes to use
     """
     max_mins = [0]
 
@@ -53,9 +52,19 @@ def distinguish_paths(current_file: np.ndarray, *args: Axes) -> None:
 
 
 class DirectionalArrow(FancyArrow):
+    """
+Custom class for drawing an arrow in matplotlib
+    """
 
-    def __init__(self, xy, angle, total_length, width, in_degrees=False, head_width=None,
-                 shape='full', overhang=0, head_starts_at_zero=False, **kwargs):
+    def __init__(self, xy, angle, total_length, width, in_degrees=False, **kwargs):
+        """
+        :param xy: the starting location of the arrow
+        :param angle: the starting angle  of the arrow
+        :param total_length: the total length of the arrow including the head
+        :param width: the width of the arrow
+        :param in_degrees: True if the angle given is in degrees if False then in radians
+        :param kwargs: the additional arguments of FancyArrow
+        """
         if in_degrees:
             angle = np.radians(angle)
         self.angle = angle
@@ -64,16 +73,18 @@ class DirectionalArrow(FancyArrow):
         dy = np.sin(angle) * total_length
         x, y = xy
         super().__init__(x, y, dx, dy, width=width, length_includes_head=True,
-                         head_width=head_width, head_length=total_length / 2, shape=shape, overhang=overhang,
-                         head_starts_at_zero=head_starts_at_zero, **kwargs)
-
-        # self.x =
+                         head_length=total_length / 2, **kwargs)
 
         self.center_xy = [x + dx / 2, y + dy / 2]
 
         self.set_center_xy((x, y))
 
     def set_angle(self, angle, in_degrees=False):
+        """
+Sets the angle of the arrow
+        :param angle: the new angle of the arrow
+        :param in_degrees: True if the angle given is in degrees if False then in radians
+        """
         if in_degrees:
             angle = np.radians(angle)
         rotate_angle = self.angle - angle
@@ -84,23 +95,27 @@ class DirectionalArrow(FancyArrow):
         self.angle = angle
 
     def set_center_xy(self, xy):
+        """
+Sets the center of the arrow location
+        :param xy: the new x,y center coordinate of the arrow
+        """
         self.set_xy(self.get_xy() + (xy[0] - self.center_xy[0], xy[1] - self.center_xy[1]))
         self.center_xy = xy
 
 
 class Plot(object):
     """
-
+Class meant to plot log file data for the Motion Profiler of Walton Robotics
     """
 
     def __init__(self, files: dict, show_buttons: bool = True, robot_width: float = .78,
                  robot_height: float = .8) -> None:
         """
-
-        :param files:
-        :param show_buttons:
-        :param robot_width:
-        :param robot_height:
+        :param files: the log data file name, numpy data dictionary
+        :param show_buttons: true if the buttons to move between plot are shown. If False then the key events are
+        only used
+        :param robot_width: the actual robot width. Changes the width for the animation
+        :param robot_height: the actual robot height. Changes the height of the robot in the animation
         """
         super().__init__()
         self.robot_width = robot_width
@@ -138,23 +153,21 @@ class Plot(object):
 
         self.animations = {}
         self.current_plot_index = 0
-        # self.animation = None
 
         self.plot_index(self.current_plot_index)
 
     def clear_buttons(self):
         """
-
-        :return:
+Removes the buttons from the figure
         """
         while len(self.buttons_axes) != 0:
             self.buttons_axes.pop().remove()
 
     def handle_key_event(self, event: KeyEvent) -> None:
         """
-
-        :param event:
-        :return:
+Handles the key events. If the right arrow key is pressed then then it plot the next plot if it was the left arrow
+key then it plots the previous plot.
+        :param event: the key event
         """
         if event.key == "right":
             self.next_figure(1)
@@ -163,8 +176,8 @@ class Plot(object):
 
     def format_axis(self):
         """
-
-        :return:
+Sets the graphs axis labels
+        :return: the graphs
         """
 
         self.velocities.set_xlabel("Time (sec)")
@@ -178,8 +191,8 @@ class Plot(object):
 
     def next_figure(self, increment: int) -> None:
         """
-
-        :param increment:
+Clears the axis' plots, clears the buttons and then recreates the buttons and the graphs for the next graph
+        :param increment: -1 for the previous plot, 1 for the next plot
         """
         new_plot_index = max(min((self.current_plot_index + increment), (len(self.sorted_names) - 1)), 0)
 
@@ -191,9 +204,11 @@ class Plot(object):
 
     def create_buttons(self, plot_index: int) -> None:
         """
-
-        :param plot_index:
-        :return:
+Creates the buttons on the figure if the plot index is either the first of the last index then there will only be a
+single button only allowing you to move to either the previous or the next plot.If the plot index is in between the
+first and last index then there will be two buttons created the left one goes to the previous plot and the right one
+goes to the next plot.
+        :param plot_index: which log file's data to use for the graphs
         """
         if len(self.sorted_names) > 1 and self.show_buttons:
             if plot_index == 0:
@@ -220,25 +235,23 @@ class Plot(object):
 
     def next_plot(self, event: MouseEvent) -> None:
         """
-
-        :param event:
-        :return:
+Plots the next log file's data
+        :param event: the mouse event
         """
         self.next_figure(1)
 
     def previous_plot(self, event: MouseEvent) -> None:
         """
-
-        :param event:
-        :return:
+Plots the previous log file's data
+        :param event: the mouse event
         """
         self.next_figure(-1)
 
     def plot_index(self, plot_index: int) -> None:
         """
-
-        :param plot_index:
-        :return:
+Sets up the graphs, the buttons and plots the dat on graphs for the current plot index which indicates which log
+file's data to use
+        :param plot_index: which log file's data to use for the graphs
         """
         self.fig.canvas.set_window_title(str(self.sorted_names[plot_index]))
 
@@ -396,7 +409,7 @@ Stops all the animations.
 
 class RobotMovement(object):
     """
-
+The class that handles the animation of a robot given its path data
     """
 
     def __init__(self, ax: Axes, data: np.ndarray, start_index: int = 0, robot_width: float = .78,
@@ -546,8 +559,6 @@ This is called when you click with your mouse on the current figure.
                                                blit=True,
                                                repeat=False)
                 self.playing = True
-            # else:
-            #     self.stop_animation()
 
 
 def main(open_path):

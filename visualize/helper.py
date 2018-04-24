@@ -16,10 +16,10 @@ from visualize import DELIMITER, DTYPE, ENCODING, COLUMNS
 
 def find_linear_best_fit_line(x, y):
     """
-
-    :param x:
-    :param y:
-    :return:
+Finds the line of best fit
+    :param x: the x data
+    :param y: the y data
+    :return: the coefficient of coefficient and the intercept
     """
     m, b = np.polyfit(x, y, 1)
 
@@ -27,6 +27,14 @@ def find_linear_best_fit_line(x, y):
 
 
 def plot_subplots(features, translation, subplots, labels=None):
+    """
+This is used for if the features contain more than 2 dimensions and wants to be decomposed into the combinations of its dimensions
+    :param features: The features to use
+    :param translation: the translation from column index to column label name
+    :param subplots: the subplots to plot the dimension combination on
+    :param labels: the color array
+    :return: the column combination in order
+    """
     variable_combinations = combinations(list(_ for _ in range(features.shape[1])), 2)
 
     for combination, subplot in zip(variable_combinations, subplots):
@@ -64,8 +72,35 @@ Retrieves the data from the csv log file.
     return np.genfromtxt(file, delimiter=DELIMITER, dtype=DTYPE, names=True, encoding=ENCODING)
 
 
+def needed_axes(clf=None, ax=None):
+    """
+Method in case ax is None it will find what type of Axes is need in order to plot the features if there are 3 dimensions to the features then it will return a Axes3D otherwise a simple 2D Axes
+    :param clf: the model to look at what what type of features are needed. This model needs to have been fitted already
+    :param ax: the axes to check if is a 3D axes or not
+    :return: True if the axes is an instance of Axes3D False otherwise and the Axes instance itself.
+    """
+    is_3d = False
+
+    if ax is None:
+        try:
+            if clf is None:
+                return False, plt.gca()
+
+            clf.predict([[0, 0, 0]])
+            is_3d = True
+            ax = plt.gca(projection="3d")
+        except ValueError:
+            is_3d = False
+            ax = plt.gca()
+
+    elif isinstance(ax, Axes3D):
+        is_3d = True
+
+    return is_3d, ax
+
+
 def plot_hyperplane(clf, ax: Axes = None, interval: float = .05, alpha=.3,
-                    colors = ('r', 'b')) -> Line3DCollection:
+                    colors=('r', 'b')) -> Line3DCollection:
     """
 Plots the hyperplane of the model in an axes
     :param clf: the classifier to use to find the hyperplane
@@ -76,19 +111,7 @@ Plots the hyperplane of the model in an axes
     :return: the mesh of the created hyperplane that was added to the axes
     """
 
-    is_3d = False
-
-    if ax is None:
-        try:
-            clf.predict([[0, 0, 0]])
-            is_3d = True
-            ax = plt.gca(projection="3d")
-        except ValueError:
-            is_3d = False
-            ax = plt.gca()
-
-    elif isinstance(ax, Axes3D):
-        is_3d = True
+    is_3d, ax = needed_axes(clf, ax)
 
     interval = int(1 / interval)
 
@@ -111,6 +134,10 @@ Plots the hyperplane of the model in an axes
             z = clf.decision_function(np.c_[xx.ravel(), yy.ravel(), zz.ravel()])
         elif hasattr(clf, "predict_proba"):
             z = clf.predict_proba(np.c_[xx.ravel(), yy.ravel(), zz.ravel()])[:, 1]
+        else:
+            raise ValueError(
+                "The model passed in does not contain either the decision_function or the predict_proba functions.")
+
         z = z.reshape(xx.shape)
 
         vertices, faces, _, _ = measure.marching_cubes(z, 0)
@@ -134,6 +161,14 @@ Plots the hyperplane of the model in an axes
 
 
 def plot_fitting_plane(clf, ax, number: int = 50, color=None):
+    """
+Plots the line of best fit that was fitted by the model on the specific axes
+    :param clf:
+    :param ax:
+    :param number:
+    :param color:
+    :return:
+    """
     x_min, x_max = ax.get_xlim()
 
     if isinstance(ax, Axes3D):
@@ -298,9 +333,9 @@ Checks if a model has been fitted yet or not
 
 def get_features(file_data):
     """
-
-    :param file_data:
-    :return:
+Return the features to use when finding the constants
+    :param file_data: the log data to use to extract the features from
+    :return: the features with a dictionary of each column name
     """
     average_power = (file_data["pLeft"] + file_data["pRight"]) / 2.0
 
@@ -338,7 +373,12 @@ Shows the legends for the Axes
         subplot.legend(handles, labels)
 
 
-def retrieve_parameters(clf):
+def retrieve_parameters(clf) -> dict:
+    """
+Retrieves the available parameters that can be changed in the model with as key the variable name and as value the datatype
+    :param clf: the model to retrieve the parameters from
+    :return: the list of parameters that can be changed in the model
+    """
     parameters = {}
 
     for parameter_name, parameter_default_value in clf.get_params().items():
