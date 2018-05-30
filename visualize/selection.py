@@ -42,7 +42,7 @@ class LassoPointSelector(LassoSelector):
             yield fc
 
     @classmethod
-    def set_scatter_plots(cls, scatter_plots, number_of_points):
+    def set_scatter_plots(cls, scatter_plots):
         cls.__scatter_plots = scatter_plots
 
         if len(scatter_plots) > 0:
@@ -50,6 +50,7 @@ class LassoPointSelector(LassoSelector):
             for plot in scatter_plots:
                 cls.__canvases.add(plot.figure.canvas)
 
+            number_of_points = scatter_plots[0].get_offsets().shape[0]
             cls.__fcs = tuple(cls.__create_facecolors(cls.__scatter_plots, number_of_points))
 
             cls.__select_all_points = np.arange(0, number_of_points)
@@ -80,7 +81,7 @@ class LassoPointSelector(LassoSelector):
                 if LassoPointSelector.indexes is None:
                     LassoPointSelector.indexes = point_index
                 else:
-                    LassoPointSelector.indexes = np.append(LassoPointSelector.indexes, point_index)
+                    LassoPointSelector.indexes = np.unique(np.append(LassoPointSelector.indexes, point_index))
             elif LassoPointSelector.indexes is not None and mouse_button_pressed == self.mouse_button_remove:
                 LassoPointSelector.indexes = np.array([*set(LassoPointSelector.indexes).difference(point_index)],
                                                       dtype=np.int64)
@@ -100,7 +101,7 @@ class LassoPointSelector(LassoSelector):
 
 
 class PointSelectors(object):
-    def __init__(self, scatter_plots, data_size):
+    def __init__(self, scatter_plots, on_release):
         self.selectors = dict()
 
         for scatter_plot in scatter_plots:
@@ -113,12 +114,11 @@ class PointSelectors(object):
         for ax in self.selectors.keys():
             ax.figure.canvas.mpl_connect("button_release_event", self._on_release)
 
-        LassoPointSelector.set_scatter_plots(scatter_plots, data_size)
+        self.on_release = on_release
+
+        LassoPointSelector.set_scatter_plots(scatter_plots)
 
     def _on_release(self, event):
         ax = event.inaxes
         if ax is not None and ax in self.selectors:
             self.on_release(self.selectors[ax].indexes)
-
-    def on_release(self, selections):
-        print(selections)
