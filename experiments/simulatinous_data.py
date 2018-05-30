@@ -18,19 +18,19 @@ if __name__ == '__main__':
 
     columns = (0, 1, 2)
 
-    ax = plt.subplot(311)
+    ax = plt.subplot(131)
     scat = ax.scatter(xy[:, columns[0]], xy[:, columns[1]])
     ax.set_aspect("equal")
     ax.set_xlabel("Column 0")
     ax.set_ylabel("Column 1")
 
-    ax2 = plt.subplot(312)
+    ax2 = plt.subplot(132)
     scat2 = ax2.scatter(xy[:, columns[1]], xy[:, columns[2]])
     ax2.set_aspect("equal")
     ax2.set_xlabel("Column 1")
     ax2.set_ylabel("Column 2")
 
-    ax3 = plt.subplot(313)
+    ax3 = plt.subplot(133)
     scat3 = ax3.scatter(xy[:, columns[0]], xy[:, columns[2]])
     ax3.set_aspect("equal")
     ax3.set_xlabel("Column 0")
@@ -43,6 +43,6 @@ if __name__ == '__main__':
     ax4.set_ylabel("Column 1")
     ax4.set_zlabel("Column 2")
 
-    selector = PointSelectors((scat, scat2, scat3, scat4), number_of_points)
+    selector = PointSelectors((scat, scat2, scat3, scat4))
 
     plt.show()
