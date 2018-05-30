@@ -11,7 +11,7 @@ from mpl_toolkits.mplot3d.art3d import Line3DCollection
 from skimage import measure
 from sklearn.exceptions import NotFittedError
 
-from visualize import DELIMITER, DTYPE, ENCODING, COLUMNS
+from visualize import DTYPE, ENCODING, COLUMNS, DELIMITERS
 
 
 def find_linear_best_fit_line(x, y):
@@ -69,7 +69,12 @@ Retrieves the data from the csv log file.
     :param file: the file to retrieve the data from
     :return: the data in an dictionary with as keys the first row in the csv file
     """
-    return np.genfromtxt(file, delimiter=DELIMITER, dtype=DTYPE, names=True, encoding=ENCODING)
+
+    for delimiter in DELIMITERS:
+        try:
+            return np.genfromtxt(file, delimiter=delimiter, dtype=DTYPE, names=True, encoding=ENCODING)
+        except ValueError:
+            pass
 
 
 def needed_axes(clf=None, ax=None):
