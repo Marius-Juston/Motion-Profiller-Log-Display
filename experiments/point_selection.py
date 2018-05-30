@@ -4,8 +4,6 @@ import numpy as np
 from matplotlib.path import Path
 from matplotlib.widgets import LassoSelector
 
-from experiments.LassoSelector3D import LassoSelector3D
-
 
 class SelectFromCollection(object):
     """Select indices from a matplotlib collection using `LassoSelector`.
@@ -95,7 +93,6 @@ if __name__ == '__main__':
 
 
     fig.canvas.mpl_connect("key_press_event", accept)
-
 
 
     def move(event):
