@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import numpy as np
 from matplotlib.path import Path
+from matplotlib.widgets import LassoSelector
 
 from experiments.LassoSelector3D import LassoSelector3D
 
@@ -45,8 +46,10 @@ class SelectFromCollection(object):
         elif len(self.fc) == 1:
             self.fc = np.tile(self.fc, (self.Npts, 1))
 
-        self.lasso = LassoSelector3D(ax, onselect=self.onselect, button=1)
+        self.lasso = LassoSelector(ax, onselect=self.onselect, button=1)
         self.ind = []
+
+        print(self.fc)
 
     def onselect(self, verts):
         path = Path(verts)
@@ -72,11 +75,10 @@ if __name__ == '__main__':
     data = np.random.rand(100, 2)
 
     # Axes3D
-    subplot_kw = dict(xlim=(0, 1), ylim=(0, 1), autoscale_on=False, projection="3d")
+    subplot_kw = dict(xlim=(0, 1), ylim=(0, 1), autoscale_on=False)
     fig, ax = plt.subplots(subplot_kw=subplot_kw)
 
     pts = ax.scatter(data[:, 0], data[:, 1], s=80)
-    ax.mouse_init(3, 2)
     print(ax.can_pan())
     print(ax.can_zoom())
 
@@ -93,6 +95,7 @@ if __name__ == '__main__':
 
 
     fig.canvas.mpl_connect("key_press_event", accept)
+
 
 
     def move(event):
