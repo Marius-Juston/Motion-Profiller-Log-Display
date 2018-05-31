@@ -379,6 +379,39 @@ Shows the legends for the Axes
         subplot.legend(handles, labels)
 
 
+def is_straight_line(file_data):
+    x = file_data["xTarget"]
+    y = file_data["yTarget"]
+
+    x1 = x[0]
+    x2 = x[-1]
+
+    x_sub = (x2 - x1)
+    if x_sub == 0:
+        return np.alltrue(x == x1)
+
+    y1 = y[0]
+    y2 = y[-1]
+    y_sub = (y2 - y1)
+
+    # y = m*x + b
+    m = y_sub / x_sub
+    b = -((y_sub * x1) / x_sub) + y1
+
+    return np.alltrue(y == m * x + b)
+
+
+def get_xy_limited(intercept, coef, x_lim, y_lim):
+    x = (y_lim - intercept) / coef
+
+    x[x > x_lim.max()] = x_lim.max()
+    x[x < x_lim.min()] = x_lim.min()
+
+    y = x * coef + intercept
+
+    return x, y
+
+
 def retrieve_parameters(clf) -> dict:
     """
 Retrieves the available parameters that can be changed in the model with as key the variable name and as value the datatype

@@ -11,7 +11,7 @@ from sklearn.svm import OneClassSVM
 import visualize
 from visualize import MODEL_FILE
 from visualize.helper import is_empty_model, is_valid_log, get_data, get_features, plot_hyperplane, plot_subplots, \
-    find_linear_best_fit_line, contains_key
+    find_linear_best_fit_line, contains_key, is_straight_line, get_xy_limited
 
 
 class ConstantViewer(object):
@@ -162,7 +162,7 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
         if self.show_outliers:
             self.master_plot.scatter(outliers[:, 0], outliers[:, 1], outliers[:, 2], c="black")
 
-        self.show_constants_graph(features, labels, c=color_labels)
+        self.show_constants_graph(features, file_data, labels, c=color_labels)
 
         plot_subplots(new_scaled_features, headers, (self.time_velocity, self.time_power, self.power_velocity),
                       color_labels)
@@ -183,15 +183,21 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
         for ax in (self.time_velocity, self.time_power, self.power_velocity):
             ax.grid(True)
 
-    def show_constants_graph(self, features, labels, c=None):
+    def show_constants_graph(self, features, file_data, labels, c=None):
         """
     Creates an addition figure that will display the a graph with the constants on it and also the lines of best fit of
     the accelerating portion of it, the decelerating portion of it and the average of both of those lines
         :param features: the features to use to show the graph and find the constants from
+        :param file_data: the whole file data
         :param labels: the labels to say if a data point is accelerating or not
         :param c: the color to plot the points
         :return the constants for the motion profiling kV, kK and kAcc
         """
+        if is_straight_line(file_data):
+            easygui.msgbox("It was determined that the robot was trying to go straight. "
+                           "As an ongoing feature the program will be able detect kLag, etc... "
+                           "howevrr for the instance this features has not been added")
+
         figure = plt.figure("Constants graph")
         constants_plot = figure.gca()
         constants_plot.set_xlabel("Velocity")
@@ -215,12 +221,19 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
         x_lim = np.array(constants_plot.get_xlim())
         y_lim = np.array(constants_plot.get_ylim())
 
-        constants_plot.plot(x_lim, coef_accelerating * x_lim + intercept_accelerating)
-        constants_plot.plot(x_lim, coef_decelerating * x_lim + intercept_decelerating)
+        x, y = get_xy_limited(intercept_accelerating, coef_accelerating, x_lim, y_lim)
+        constants_plot.plot(x, y)
+        x, y = get_xy_limited(intercept_decelerating, coef_decelerating, x_lim, y_lim)
+        constants_plot.plot(x, y)
+        # constants_plot.plot(x_lim, coef_accelerating * x_lim + intercept_accelerating)
+        # constants_plot.plot(x_lim, coef_decelerating * x_lim + intercept_decelerating)
 
         average_coef = (coef_accelerating + coef_decelerating) / 2
         average_intercept = (intercept_accelerating + intercept_decelerating) / 2
-        constants_plot.plot(x_lim, average_coef * x_lim + average_intercept)
+        # constants_plot.plot(x_lim, average_coef * x_lim + average_intercept)
+
+        x, y = get_xy_limited(average_intercept, average_coef, x_lim, y_lim)
+        constants_plot.plot(x, y)
 
         acceleration_coefficient = (coef_accelerating - average_coef)
         acceleration_intercept = (intercept_accelerating - average_intercept)
