@@ -11,7 +11,7 @@ from mpl_toolkits.mplot3d.art3d import Line3DCollection
 from skimage import measure
 from sklearn.exceptions import NotFittedError
 
-from visualize import DTYPE, ENCODING, COLUMNS, DELIMITERS
+from visualize import DTYPE, ENCODING, DELIMITERS, COLUMNS
 
 
 def find_linear_best_fit_line(x, y):
