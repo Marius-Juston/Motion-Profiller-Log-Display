@@ -114,7 +114,7 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
                     new_features = np.concatenate((new_features, outliers_free_features), 0)
         else:
             min_max_scaler = MinMaxScaler()
-            scalers[np.full(features.shape[0], True)] = min_max_scaler
+            scalers[min_max_scaler] = np.full(features.shape[0], True)
             new_features = min_max_scaler.fit_transform(features)
 
         outlier_detector = OneClassSVM(gamma=10)  # Seems to work best
