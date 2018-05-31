@@ -103,7 +103,6 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
                 coefficient, _ = find_linear_best_fit_line(features_at_path[:half, 2], features_at_path[:half, 0])
 
                 if coefficient < 0:
-                    # features_at_path[:, 0] -= features_at_path[:, 0].max()
                     features_at_path[:, 0] *= - 1
 
                 features_at_path = min_max_scaler.fit_transform(features_at_path)
