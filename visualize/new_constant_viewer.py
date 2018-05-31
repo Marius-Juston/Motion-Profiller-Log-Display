@@ -11,7 +11,7 @@ from sklearn.svm import OneClassSVM
 import visualize
 from visualize import MODEL_FILE
 from visualize.helper import is_empty_model, is_valid_log, get_data, get_features, plot_hyperplane, plot_subplots, \
-    find_linear_best_fit_line
+    find_linear_best_fit_line, contains_key
 
 
 class ConstantViewer(object):
@@ -81,33 +81,42 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
         :param file_data: the log file's data
         :return: the manipulated features array, the outliers of the data set and the data scaler
         """
-        min_max_scaler = MinMaxScaler()
 
-        moving_mask = file_data["motionState"] == "MOVING"
-        features = features[moving_mask]
-        file_data = file_data[moving_mask]
+        if contains_key(file_data, "motionState"):
+            moving_mask = file_data["motionState"] == "MOVING"
+            features = features[moving_mask]
+            file_data = file_data[moving_mask]
 
         new_features = None
+        scalers = {}
+        if contains_key(file_data, "pathNumber"):
 
-        for i in range(file_data["pathNumber"].min(), file_data["pathNumber"].max() + 1):
-            path_number = file_data["pathNumber"] == i
+            for i in range(file_data["pathNumber"].min(), file_data["pathNumber"].max() + 1):
+                min_max_scaler = MinMaxScaler()
 
-            features_at_path = features[path_number]
+                path_number = file_data["pathNumber"] == i
+                scalers[min_max_scaler] = path_number
 
-            half = features_at_path.shape[0] // 2
-            coefficient, _ = find_linear_best_fit_line(features_at_path[:half, 2], features_at_path[:half, 0])
+                features_at_path = features[path_number]
 
-            if coefficient < 0:
-                features_at_path[:, 0] -= features_at_path[:, 0].max()
-                features_at_path[:, 0] *= - 1
+                half = features_at_path.shape[0] // 2
+                coefficient, _ = find_linear_best_fit_line(features_at_path[:half, 2], features_at_path[:half, 0])
 
-            features_at_path = min_max_scaler.fit_transform(features_at_path)
-            outliers_free_features = features_at_path
+                if coefficient < 0:
+                    # features_at_path[:, 0] -= features_at_path[:, 0].max()
+                    features_at_path[:, 0] *= - 1
 
-            if new_features is None:
-                new_features = outliers_free_features
-            else:
-                new_features = np.concatenate((new_features, outliers_free_features), 0)
+                features_at_path = min_max_scaler.fit_transform(features_at_path)
+                outliers_free_features = features_at_path
+
+                if new_features is None:
+                    new_features = outliers_free_features
+                else:
+                    new_features = np.concatenate((new_features, outliers_free_features), 0)
+        else:
+            min_max_scaler = MinMaxScaler()
+            scalers[np.full(features.shape[0], True)] = min_max_scaler
+            new_features = min_max_scaler.fit_transform(features)
 
         outlier_detector = OneClassSVM(gamma=10)  # Seems to work best
 
@@ -116,10 +125,22 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
         outliers = new_features[outlier_prediction == -1]
         new_features = new_features[outlier_prediction == 1]
 
+        features = self.reverse_scalling(new_features, scalers, outlier_prediction)
+
         if self.show_outliers:
             plot_hyperplane(outlier_detector, self.master_plot, interval=.04, colors="orange")
 
-        return new_features, outliers, min_max_scaler
+        return new_features, outliers, features
+
+    def reverse_scalling(self, features, scalers, outlier_prediction):
+        features = np.copy(features)
+
+        for scaler, index in zip(scalers.keys(), scalers.values()):
+            index = index[outlier_prediction == 1]
+
+            features[index] = scaler.inverse_transform(features[index])
+
+        return features
 
     def graph(self, file_data):
         """
@@ -131,20 +152,21 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
 
         features, headers = get_features(file_data)
 
-        new_features, outliers, scaler = self.manipulate_features(features, file_data)
-        features = scaler.inverse_transform(new_features)
+        new_scaled_features, outliers, features = self.manipulate_features(features, file_data)
+        # features = scaler.inverse_transform(new_scaled_features)
 
-        labels = self.clf.predict(new_features)
+        labels = self.clf.predict(new_scaled_features)
         color_labels = list(map(lambda x: 'r' if x == 0 else 'b', labels))
 
-        self.plot_3d_plot(new_features, headers, color_labels)
+        self.plot_3d_plot(new_scaled_features, headers, color_labels)
 
         if self.show_outliers:
             self.master_plot.scatter(outliers[:, 0], outliers[:, 1], outliers[:, 2], c="black")
 
         self.show_constants_graph(features, labels, c=color_labels)
 
-        plot_subplots(new_features, headers, (self.time_velocity, self.time_power, self.power_velocity), color_labels)
+        plot_subplots(new_scaled_features, headers, (self.time_velocity, self.time_power, self.power_velocity),
+                      color_labels)
 
         plt.draw()
 
@@ -238,7 +260,14 @@ This is the main loop which runs until the user no selects any file. Retrieves t
 
             file_data = get_data(file)
 
-            if is_valid_log(file_data):
+            legacy_log = is_valid_log(file_data, visualize.LEGACY_COLUMNS)
+            current_log = is_valid_log(file_data)
+
+            if legacy_log or current_log:
+                if legacy_log and not current_log:
+                    easygui.msgbox("Because this log contains information that makes it sub optimal for "
+                                   "manipulating the data optimally results may be inaccurate")
+
                 # TODO make it so that when closing the figure using the GUI it reopens normally
                 plot = ConstantViewer(clf)
                 plot.graph(file_data)
