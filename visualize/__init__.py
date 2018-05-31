@@ -6,6 +6,11 @@ COLUMNS = (
     "pLeft", "pRight", "pathNumber", "motionState"
 )
 
+LEGACY_COLUMNS = (
+    "Time", "xActual", "yActual", "angleActual", "xTarget", "yTarget", "angleTarget", "XTE", "lagE", "angleE",
+    "pLeft", "pRight"
+)
+
 USER_HOME_DIRECTORY = os.path.expanduser("~")
 
 MASTER_FOLDER = "{0:s}/MotionViewer/".format(USER_HOME_DIRECTORY)
@@ -23,4 +28,4 @@ OUTLIER = -1
 # DTYPE = tuple("U10" if i == len(COLUMNS) - 1 else np.float32 for i in range(len(COLUMNS)))
 DTYPE = None
 ENCODING = None
-DELIMITERS = (',', ", ")
+DELIMITERS = (', ', ",")
