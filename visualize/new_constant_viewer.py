@@ -264,8 +264,8 @@ This is the main loop which runs until the user no selects any file. Retrieves t
 
             if legacy_log or current_log:
                 if legacy_log and not current_log:
-                    easygui.msgbox("Because this log contains information that makes it sub optimal for "
-                                   "manipulating the data optimally results may be inaccurate")
+                    easygui.msgbox("Because this log is missing information that makes it optimal "
+                                   "for manipulating the data efficiently results may be inaccurate")
 
                 # TODO make it so that when closing the figure using the GUI it reopens normally
                 plot = ConstantViewer(clf)

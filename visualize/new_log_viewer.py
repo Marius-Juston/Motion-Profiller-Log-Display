@@ -587,7 +587,7 @@ This is the main loop which runs until the user no selects any file.
 
                 else:
                     easygui.msgbox(
-                        "The file {0:s} is not a valid file it will be removed.".format(os.path.basename(file)))
+                        "The file {0:s} is not a valid file, it will not be plotted.".format(os.path.basename(file)))
 
             plots = Plot(csv_files)
             plots.show()
