@@ -352,7 +352,8 @@ Return the features to use when finding the constants
 
     velocity[0] = 0
 
-    x = np.concatenate((np.vstack(average_power), np.vstack(velocity), np.vstack(time)), 1)
+    # x = np.concatenate((np.vstack(average_power), np.vstack(velocity), np.vstack(time)), 1)
+    x = np.hstack((average_power.reshape(-1, 1), velocity.reshape(-1, 1), time.reshape(-1, 1)))
     return x, {0: 'Average Power', 1: 'Velocity', 2: 'Time'}
 
 
