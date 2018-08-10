@@ -189,7 +189,7 @@ def train_model(open_path):
     ax3d.set_zlabel('Time')
 
     total_data = {}
-    already_used_files = []
+    already_used_files = set()
     changed_anything = False
     hyperplane = None
 
@@ -215,12 +215,16 @@ def train_model(open_path):
             ax3d.scatter(decelerating[:, 0], decelerating[:, 1], decelerating[:, 2], c="blue",
                          label="deceleration")
 
+            already_used_files.add(*data["files"])
+
             plt.show()
         else:
             clf = create_blank_classifier()
             changed_anything = True
     else:
         clf = create_blank_classifier()
+
+
 
     while True:
         file = easygui.fileopenbox('Please locate csv file', 'Specify File', default=open_path, filetypes='*.csv')
@@ -231,12 +235,12 @@ def train_model(open_path):
             file_data = get_data(file)
 
             # TODO make this loop thought the steps as many times as they are number of paths
-            if is_valid_log(file_data):
+            if is_valid_log(file_data, visualize.LEGACY_COLUMNS):
                 x, _ = get_features(file_data)
                 y = get_labels(file_data)
 
-                x = x[file_data["motionState"] == 'MOVING']
-                y = y[file_data["motionState"] == 'MOVING']
+                # x = x[file_data["motionState"] == 'MOVING']
+                # y = y[file_data["motionState"] == 'MOVING']
 
                 outlier = IsolationForest(n_jobs=-1, random_state=0)
 
@@ -339,7 +343,7 @@ def train_model(open_path):
 
     if changed_anything and not is_empty_model(clf):
         joblib.dump(clf, MODEL_FILE)
-        np.savez(MODEL_DATA_FILE, features=total_data["features"], labels=total_data["labels"])
+        np.savez(MODEL_DATA_FILE, features=total_data["features"], labels=total_data["labels"], files=already_used_files)
         easygui.msgbox("Model saved.")
 
     plt.close("all")

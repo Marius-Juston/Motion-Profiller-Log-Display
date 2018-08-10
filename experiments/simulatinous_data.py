@@ -43,6 +43,24 @@ if __name__ == '__main__':
     ax4.set_ylabel("Column 1")
     ax4.set_zlabel("Column 2")
 
-    selector = PointSelectors((scat, scat2, scat3, scat4))
+    selector = None
+
+    plots = (scat, scat2, scat3)
+
+
+    def reset_plots(indexes):
+        global scat, scat2, scat3, plots, selector
+
+        selector.remove_scatter_plots(plots)
+
+        scat = ax.scatter(xy[:, columns[0]], xy[:, columns[1]])
+        scat2 = ax2.scatter(xy[:, columns[1]], xy[:, columns[2]])
+        scat3 = ax3.scatter(xy[:, columns[0]], xy[:, columns[2]])
+
+        plots = (scat, scat2, scat3)
+        selector.add_scatter_plots(plots)
+
+
+    selector = PointSelectors(plots, reset_plots)
 
     plt.show()

@@ -8,7 +8,7 @@ yaw = [0.0, 0.5, 1.3]
 fig, ax = plt.subplots(1, 1)
 plt.axis('equal')
 plt.grid()
-ax.set_xlim(-10, 10)
+ax.set_xlim(-1, 10)
 ax.set_ylim(-10, 10)
 
 anim = None
