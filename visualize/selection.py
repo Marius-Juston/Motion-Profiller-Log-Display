@@ -25,8 +25,9 @@ class LassoPointSelector(LassoSelector):
     indexes = None
     __canvases = set()
 
-    __scatter_plots = None
+    _scatter_plots = set()
     __select_all_points = None
+    number_of_points = 0
 
     @staticmethod
     def __create_facecolors(scatters, number_of_points):
@@ -43,21 +44,38 @@ class LassoPointSelector(LassoSelector):
 
     @classmethod
     def set_scatter_plots(cls, scatter_plots):
-        cls.__scatter_plots = scatter_plots
+
+        LassoPointSelector._scatter_plots = set(scatter_plots)
 
         if len(scatter_plots) > 0:
 
+            offset_size = []
+
             for plot in scatter_plots:
-                cls.__canvases.add(plot.figure.canvas)
+                offset_size.append(plot.get_offsets().shape[0])
 
-            number_of_points = scatter_plots[0].get_offsets().shape[0]
-            cls.__fcs = tuple(cls.__create_facecolors(cls.__scatter_plots, number_of_points))
+                LassoPointSelector.__canvases.add(plot.figure.canvas)
 
-            cls.__select_all_points = np.arange(0, number_of_points)
-            cls.indexes = cls.__select_all_points
+            LassoPointSelector.number_of_points = offset_size[0]
+
+            for size in range(1, len(offset_size)):
+                if offset_size[size] != LassoPointSelector.number_of_points:
+                    raise ValueError("There is not the same number of points for all scatter plots")
+
+            LassoPointSelector.__fcs = tuple(LassoPointSelector.__create_facecolors(LassoPointSelector._scatter_plots,
+                                                                                    LassoPointSelector.number_of_points))
+
+            LassoPointSelector.__select_all_points = np.arange(0, LassoPointSelector.number_of_points)
+
+            if LassoPointSelector.indexes is None:
+                LassoPointSelector.indexes = LassoPointSelector.__select_all_points
+            else:
+                LassoPointSelector.indexes = LassoPointSelector.indexes[
+                    LassoPointSelector.indexes < LassoPointSelector.__fcs[0].shape[0]]
 
     def __init__(self, scatter_plot, alpha_other=.1, mouse_button_add=1, mouse_button_remove=3):
         super().__init__(scatter_plot.axes, self.on_select)
+        # Sets constants
         self.mouse_button_remove = mouse_button_remove
         self.mouse_button_add = mouse_button_add
         self.alpha_other = alpha_other
@@ -66,31 +84,45 @@ class LassoPointSelector(LassoSelector):
     def _release(self, event):
         if self.verts is not None:
             self.verts.append(self._get_data(event))
-            self.on_select(self.verts, self.offset, event.button)
+            # Custom on select method uses 3 arguments
+            self.on_select(self.verts, self.offset, event)
         self.line.set_data([[], []])
         self.line.set_visible(False)
         self.verts = None
 
-    def on_select(self, vertices, offset, mouse_button_pressed):
+    def on_select(self, vertices, offset, event):
+        # Gets the mouse button pressed in the event
+        mouse_button_pressed = event.button
+
         path = Path(vertices)
 
+        # Gets the point indexes pressed
         point_index = np.nonzero(path.contains_points(offset))[0]
 
+        # If there are points that are selected
         if point_index.shape[0] != 0:
+            # If the  mouse button pressed is the one that means that you are selecting the points
             if mouse_button_pressed == self.mouse_button_add:
+                # If not points are selected
                 if LassoPointSelector.indexes is None:
+                    # Sets the indexes to the selcted points
                     LassoPointSelector.indexes = point_index
                 else:
+                    # Add the points selected inside the indexes and then remove the duplicates
                     LassoPointSelector.indexes = np.unique(np.append(LassoPointSelector.indexes, point_index))
+            # If there are already selected points and you want to remove the selected points
             elif LassoPointSelector.indexes is not None and mouse_button_pressed == self.mouse_button_remove:
-                LassoPointSelector.indexes = np.array([*set(LassoPointSelector.indexes).difference(point_index)],
-                                                      dtype=np.int64)
+                # keeps only the indexes that are not in both indexes and point_index
+                LassoPointSelector.indexes = np.setdiff1d(LassoPointSelector.indexes, point_index)
 
-            set_facecolors(LassoPointSelector.__scatter_plots, LassoPointSelector.__fcs, LassoPointSelector.indexes,
+            # Sets the facecolors of the currently selected points to be more transparent
+            set_facecolors(LassoPointSelector._scatter_plots, LassoPointSelector.__fcs, LassoPointSelector.indexes,
                            self.alpha_other)
+        # if not points are selected
         else:
-            set_facecolors(LassoPointSelector.__scatter_plots, LassoPointSelector.__fcs, LassoPointSelector.indexes, 1)
+            # Sets all the points to be selected
             LassoPointSelector.indexes = LassoPointSelector.__select_all_points
+            set_facecolors(LassoPointSelector._scatter_plots, LassoPointSelector.__fcs, LassoPointSelector.indexes, 1)
 
         LassoPointSelector.update_figures()
 
@@ -101,24 +133,53 @@ class LassoPointSelector(LassoSelector):
 
 
 class PointSelectors(object):
-    def __init__(self, scatter_plots, on_release):
+    cids = {}
+    number_of_points = 0
+
+    def __init__(self, scatter_plots, on_release, alpha_other=.1):
         self.selectors = dict()
 
+        self.add_scatter_plots(scatter_plots, alpha_other)
+        self.on_release = on_release
+
+        # LassoPointSelector.set_scatter_plots(scatter_plots)
+
+    def remove_scatter_plots(self, scatter_plots):
         for scatter_plot in scatter_plots:
             ax = scatter_plot.axes
-            if not isinstance(ax, Axes3D):
-                self.selectors[ax] = LassoPointSelector(scatter_plot)
+
+            self.selectors[ax].disconnect_events()
+            if ax in PointSelectors.cids:
+                ax.figure.canvas.mpl_disconnect(PointSelectors.cids[ax])
+            del self.selectors[ax]
+
+            scatter_plot.remove()
+            ax.clear()
+
+            LassoPointSelector._scatter_plots.remove(scatter_plot)
+
+        # LassoPointSelector.set_scatter_plots(LassoPointSelector._scatter_plots)
+
+    def add_scatter_plots(self, scatter_plots, alpha_other=.1):
+        for scatter_plot in scatter_plots:
+            ax = scatter_plot.axes
+            if not isinstance(ax, Axes3D) and ax not in self.selectors:
+                self.selectors[ax] = LassoPointSelector(scatter_plot, alpha_other=alpha_other)
 
         # must be done afterwards otherise it will casue the relsae event of the lasss selection to be called
         # after thus not allowing us to retrieve the latest index selections
         for ax in self.selectors.keys():
-            ax.figure.canvas.mpl_connect("button_release_event", self._on_release)
+            PointSelectors.cids[ax] = ax.figure.canvas.mpl_connect("button_release_event", self._on_release)
 
-        self.on_release = on_release
+        plots = LassoPointSelector._scatter_plots
 
-        LassoPointSelector.set_scatter_plots(scatter_plots)
+        for scatter in scatter_plots:
+            plots.add(scatter)
+        LassoPointSelector.set_scatter_plots(plots)
+
+        PointSelectors.number_of_points = LassoPointSelector.number_of_points
 
     def _on_release(self, event):
         ax = event.inaxes
         if ax is not None and ax in self.selectors:
-            self.on_release(self.selectors[ax].indexes)
+            self.on_release(LassoPointSelector.indexes)
