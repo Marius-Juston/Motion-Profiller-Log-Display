@@ -53,7 +53,7 @@ class LassoPointSelector(LassoSelector):
         self.verts = None
 
     def on_select(self, vertices, offset, event):
-        #gets the button pressed
+        # gets the button pressed
         mouse_button_pressed = event.button
 
         path = Path(vertices)
@@ -61,7 +61,7 @@ class LassoPointSelector(LassoSelector):
         # Finds the indexces that are encircled
         point_index = np.nonzero(path.contains_points(offset))[0]
 
-        #If there are points selected
+        # If there are points selected
         if point_index.shape[0] != 0:
 
             if mouse_button_pressed == self.mouse_button_add:

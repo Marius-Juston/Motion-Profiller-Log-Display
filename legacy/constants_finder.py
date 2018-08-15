@@ -224,8 +224,6 @@ def train_model(open_path):
     else:
         clf = create_blank_classifier()
 
-
-
     while True:
         file = easygui.fileopenbox('Please locate csv file', 'Specify File', default=open_path, filetypes='*.csv')
 
@@ -343,7 +341,8 @@ def train_model(open_path):
 
     if changed_anything and not is_empty_model(clf):
         joblib.dump(clf, MODEL_FILE)
-        np.savez(MODEL_DATA_FILE, features=total_data["features"], labels=total_data["labels"], files=already_used_files)
+        np.savez(MODEL_DATA_FILE, features=total_data["features"], labels=total_data["labels"],
+                 files=already_used_files)
         easygui.msgbox("Model saved.")
 
     plt.close("all")
