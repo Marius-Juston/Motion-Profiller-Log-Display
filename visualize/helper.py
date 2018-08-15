@@ -145,7 +145,7 @@ Plots the hyperplane of the model in an axes
 
         z = z.reshape(xx.shape)
 
-        vertices, faces, _, _ = measure.marching_cubes(z, 0)
+        vertices, faces, _, _ = measure.marching_cubes_lewiner(z, 0)
         # Scale and transform to actual size of the interesting volume
         vertices = vertices * [x_max - x_min, y_max - y_min, z_max - z_min] / interval
         vertices += [x_min, y_min, z_min]
