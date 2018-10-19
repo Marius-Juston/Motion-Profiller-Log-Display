@@ -273,7 +273,8 @@ Class meant to plot log file data for the Motion Profiler of Walton Robotics
 
         self.stop_all_animations()
         if plot_index not in self.animations:
-            self.animations[plot_index] = RobotMovement(self.paths, current_file, robot_width=self.robot_width,
+            self.animations[plot_index] = RobotMovement(self.paths, self.velocities, self.errors, self.powers,
+                                                        current_file, robot_width=self.robot_width,
                                                         robot_height=self.robot_height)
         else:
             self.animations[plot_index].enable_animation()
@@ -410,7 +411,9 @@ class RobotMovement(object):
 The class that handles the animation of a robot given its path data
     """
 
-    def __init__(self, ax: Axes, data: np.ndarray, start_index: int = 0, robot_width: float = .78,
+    def __init__(self, ax: Axes, velocity_ax: Axes, errors_ax: Axes, powers_ax: Axes, data: np.ndarray,
+                 start_index: int = 0,
+                 robot_width: float = .78,
                  robot_height: float = .8) -> None:
         """
         :param ax: the ax to draw the animation on
@@ -419,6 +422,9 @@ The class that handles the animation of a robot given its path data
         :param robot_width: the robot width
         :param robot_height: the robot height
         """
+        self.powers_ax = powers_ax
+        self.errors_ax = errors_ax
+        self.velocity_ax = velocity_ax
         self.start_index = start_index
         self.robot_height = robot_height
         self.robot_width = robot_width
@@ -435,6 +441,7 @@ The class that handles the animation of a robot given its path data
         self.rectangles = []
         self.arrows = []
         self.patches = []
+        self.lines = []
 
     def set_interval(self, time: float) -> None:
         """
@@ -469,6 +476,7 @@ The class that handles the animation of a robot given its path data
 
         self.set_interval(self.delta_times[i])
         self.set_patch_location(i)
+        self.set_line_x_coordinate(self.time[i])
 
         if i == self.delta_times.shape[0] - 1:
             self.set_patch_visibility(False)
@@ -509,11 +517,27 @@ The class that handles the animation of a robot given its path data
         self.rectangles = [self.ax.add_patch(patch_actual), self.ax.add_patch(patch_target)]
         self.arrows = [self.ax.add_patch(arrow_actual), self.ax.add_patch(arrow_target)]
 
+        velocities_line = self.velocity_ax.axvline(x=starting_xy[0])
+        errors_line = self.errors_ax.axvline(x=starting_xy[0])
+        powers_line = self.powers_ax.axvline(x=starting_xy[0])
+
+        self.lines = [velocities_line, errors_line, powers_line]
+
         self.set_patch_location(0)
 
         self.patches.extend(self.rectangles)
         self.patches.extend(self.arrows)
+        self.patches.extend(self.lines)
+
         return self.patches
+
+    def set_line_x_coordinate(self, x):
+        """
+        Sets the coordinate of the Vertical lines on the Velocity, Powers and Error graphs
+        :param x: the x coordinate to place the vertical line on
+        """
+        for line in self.lines:
+            line.set_xdata(x)
 
     def set_patch_visibility(self, is_visible: bool) -> None:
         """
