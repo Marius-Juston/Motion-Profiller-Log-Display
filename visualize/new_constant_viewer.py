@@ -196,7 +196,7 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
         if is_straight_line(file_data):
             easygui.msgbox("It was determined that the robot was trying to go straight. "
                            "As an ongoing feature the program will be able detect kLag, etc... "
-                           "howevrr for the instance this features has not been added")
+                           "however for the instance this features has not been added")
 
         figure = plt.figure("Constants graph")
         constants_plot = figure.gca()
