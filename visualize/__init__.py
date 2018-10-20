@@ -1,6 +1,10 @@
 # coding=utf-8
 import os
 
+import matplotlib
+
+matplotlib.use("Qt5Agg")
+
 COLUMNS = (
     "Time", "xActual", "yActual", "angleActual", "xTarget", "yTarget", "angleTarget", "XTE", "lagE", "angleE",
     "pLeft", "pRight", "pathNumber", "motionState"
