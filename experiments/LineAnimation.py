@@ -13,6 +13,7 @@ line = velocity.axvline(x=0)
 line2 = errors.axvline(x=0)
 line3 = powers.axvline(x=0)
 
+
 def update_line(i):
     x = 1 / (i + 1)
 
@@ -21,7 +22,7 @@ def update_line(i):
     line3.set_xdata(x)
     print("Hello")
 
-    return [ line, line2, line3]
+    return [line, line2, line3]
 
 
 animation = FuncAnimation(fig, update_line,
