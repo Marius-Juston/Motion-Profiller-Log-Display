@@ -14,6 +14,75 @@ from visualize.helper import is_empty_model, is_valid_log, get_data, get_feature
     find_linear_best_fit_line, contains_key, is_straight_line, get_xy_limited
 
 
+def manipulate_features(features: np.ndarray, file_data: np.ndarray, show_outliers=False, master_plot=None) -> (np.ndarray, np.ndarray):
+    """
+Return the features manipulated in a way as to make the algorithm for separating the data more accurate.
+    :param features: the features to use
+    :param file_data: the log file's data
+    :return: the manipulated features array, the outliers of the data set and the data scaler
+    """
+
+    if contains_key(file_data, "motionState"):
+        moving_mask = file_data["motionState"] == "MOVING"
+        features = features[moving_mask]
+        file_data = file_data[moving_mask]
+
+    new_features = None
+    scalers = {}
+    if contains_key(file_data, "pathNumber"):
+
+        for i in range(file_data["pathNumber"].min(), file_data["pathNumber"].max() + 1):
+            min_max_scaler = MinMaxScaler()
+
+            path_number = file_data["pathNumber"] == i
+            scalers[min_max_scaler] = path_number
+
+            features_at_path = features[path_number]
+
+            half = features_at_path.shape[0] // 2
+            coefficient, _ = find_linear_best_fit_line(features_at_path[:half, 2], features_at_path[:half, 0])
+
+            if coefficient < 0:
+                features_at_path[:, 0] *= - 1
+
+            features_at_path = min_max_scaler.fit_transform(features_at_path)
+            outliers_free_features = features_at_path
+
+            if new_features is None:
+                new_features = outliers_free_features
+            else:
+                new_features = np.concatenate((new_features, outliers_free_features), 0)
+    else:
+        min_max_scaler = MinMaxScaler()
+        scalers[min_max_scaler] = np.full(features.shape[0], True)
+        new_features = min_max_scaler.fit_transform(features)
+
+    outlier_detector = OneClassSVM(gamma=10)  # Seems to work best
+
+    outlier_detector.fit(new_features)
+    outlier_prediction = outlier_detector.predict(new_features)
+    outliers = new_features[outlier_prediction == -1]
+    new_features = new_features[outlier_prediction == 1]
+
+    features = reverse_scalling(new_features, scalers, outlier_prediction)
+
+    if show_outliers:
+        plot_hyperplane(outlier_detector, master_plot, interval=.04, colors="orange")
+
+    return new_features, outliers, features
+
+
+def reverse_scalling(features, scalers, outlier_prediction):
+    features = np.copy(features)
+
+    for scaler, index in zip(scalers.keys(), scalers.values()):
+        index = index[outlier_prediction == 1]
+
+        features[index] = scaler.inverse_transform(features[index])
+
+    return features
+
+
 class ConstantViewer(object):
     """
 Class meant to visualize the constants of a log file for the Motion Profiler of Walton Robotics
@@ -74,72 +143,6 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
 
         plot_hyperplane(self.clf, self.master_plot, colors='orange')
 
-    def manipulate_features(self, features: np.ndarray, file_data: np.ndarray) -> (np.ndarray, np.ndarray):
-        """
-    Return the features manipulated in a way as to make the algorithm for separating the data more accurate.
-        :param features: the features to use
-        :param file_data: the log file's data
-        :return: the manipulated features array, the outliers of the data set and the data scaler
-        """
-
-        if contains_key(file_data, "motionState"):
-            moving_mask = file_data["motionState"] == "MOVING"
-            features = features[moving_mask]
-            file_data = file_data[moving_mask]
-
-        new_features = None
-        scalers = {}
-        if contains_key(file_data, "pathNumber"):
-
-            for i in range(file_data["pathNumber"].min(), file_data["pathNumber"].max() + 1):
-                min_max_scaler = MinMaxScaler()
-
-                path_number = file_data["pathNumber"] == i
-                scalers[min_max_scaler] = path_number
-
-                features_at_path = features[path_number]
-
-                half = features_at_path.shape[0] // 2
-                coefficient, _ = find_linear_best_fit_line(features_at_path[:half, 2], features_at_path[:half, 0])
-
-                if coefficient < 0:
-                    features_at_path[:, 0] *= - 1
-
-                features_at_path = min_max_scaler.fit_transform(features_at_path)
-                outliers_free_features = features_at_path
-
-                if new_features is None:
-                    new_features = outliers_free_features
-                else:
-                    new_features = np.concatenate((new_features, outliers_free_features), 0)
-        else:
-            min_max_scaler = MinMaxScaler()
-            scalers[min_max_scaler] = np.full(features.shape[0], True)
-            new_features = min_max_scaler.fit_transform(features)
-
-        outlier_detector = OneClassSVM(gamma=10)  # Seems to work best
-
-        outlier_detector.fit(new_features)
-        outlier_prediction = outlier_detector.predict(new_features)
-        outliers = new_features[outlier_prediction == -1]
-        new_features = new_features[outlier_prediction == 1]
-
-        features = self.reverse_scalling(new_features, scalers, outlier_prediction)
-
-        if self.show_outliers:
-            plot_hyperplane(outlier_detector, self.master_plot, interval=.04, colors="orange")
-
-        return new_features, outliers, features
-
-    def reverse_scalling(self, features, scalers, outlier_prediction):
-        features = np.copy(features)
-
-        for scaler, index in zip(scalers.keys(), scalers.values()):
-            index = index[outlier_prediction == 1]
-
-            features[index] = scaler.inverse_transform(features[index])
-
-        return features
 
     def graph(self, file_data):
         """
@@ -151,7 +154,7 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
 
         features, headers = get_features(file_data)
 
-        new_scaled_features, outliers, features = self.manipulate_features(features, file_data)
+        new_scaled_features, outliers, features = manipulate_features(features, file_data, self.show_outliers, self.master_plot)
         # features = scaler.inverse_transform(new_scaled_features)
 
         labels = self.clf.predict(new_scaled_features)
