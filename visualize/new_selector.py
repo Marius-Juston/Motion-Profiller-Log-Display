@@ -8,12 +8,12 @@ from mpl_toolkits.mplot3d import Axes3D
 
 class Graphs(object):
 
-    def __init__(self, features: np.array) -> None:
+    def __init__(self, features: np.array, title="2D Graphs", suptitle="") -> None:
         rows = 1
         columns = 3
 
-        self._fig = plt.figure("2D Graphs")
-        self._fig.suptitle("Press [Enter] to confirm that the points selected are the ones usable")
+        self._fig = plt.figure(title)
+        self._fig.suptitle(suptitle)
 
         gs = GridSpec(rows, columns, self._fig)
 
