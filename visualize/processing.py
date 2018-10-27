@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from sklearn.preprocessing import MinMaxScaler
 
-from visualize.selection import PointSelectors
+from legacy.selection import PointSelectors
 
 
 class SelectionProcess(object):
@@ -43,14 +43,14 @@ class OutlierAndScalingSelection(SelectionProcess):
         self.initialize_point_selection(features)
 
     def initialize_plots(self):
-        self.velocity_time.set_xlabel("Time")
-        self.velocity_time.set_ylabel("Velocity")
+        self.velocity_time.set_ylabel("Time")
+        self.velocity_time.set_xlabel("Velocity")
 
         self.power_velocity.set_xlabel("Velocity")
         self.power_velocity.set_ylabel("Average power")
 
-        self.power_time.set_xlabel("Time")
-        self.power_time.set_ylabel("Average power")
+        self.power_time.set_ylabel("Time")
+        self.power_time.set_xlabel("Average power")
 
     def initialize_point_selection(self, features):
         self.velocity_time_graph = self.velocity_time.scatter(features[:, 1], features[:, 2])

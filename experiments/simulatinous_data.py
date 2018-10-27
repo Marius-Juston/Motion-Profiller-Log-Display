@@ -4,7 +4,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from sklearn.datasets import make_regression
 from sklearn.preprocessing import MinMaxScaler
 
-from visualize.selection import PointSelectors
+from legacy.selection import PointSelectors
 
 if __name__ == '__main__':
     number_of_points = 100

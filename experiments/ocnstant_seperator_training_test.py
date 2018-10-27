@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
-from visualize.selection import PointSelectors
+from legacy.selection import PointSelectors
 
 fig = plt.figure("2D Data")
 
