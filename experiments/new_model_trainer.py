@@ -4,10 +4,11 @@ import easygui
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.svm import SVC
 
 import visualize
 from visualize import LEGACY_COLUMNS
-from visualize.helper import is_valid_log, get_data, get_features
+from visualize.helper import is_valid_log, get_data, get_features, plot_hyperplane
 from visualize.new_constant_viewer import manipulate_features
 from visualize.new_selector import Graphs, LassoManager
 
@@ -36,6 +37,14 @@ def go_through_process(all_features: np.ndarray, all_data: np.ndarray):
     graphs = Graphs(all_features, title="Acceleration vs Deceleration Selection",
                     suptitle="Selected=accelerating, Unselected=decelerating. Press [Enter] to confirm.")
     selector = LassoManager(graphs)
+
+    plt.show()
+
+    clf = SVC()
+    clf.fit(all_features, selector.get_labels())
+
+    graphs = Graphs(all_features, title="Hyperplane")
+    plot_hyperplane(clf, graphs.all_features_axes)
 
     plt.show()
 
