@@ -14,7 +14,8 @@ from visualize.helper import is_empty_model, is_valid_log, get_data, get_feature
     find_linear_best_fit_line, contains_key, is_straight_line, get_xy_limited
 
 
-def manipulate_features(features: np.ndarray, file_data: np.ndarray, show_outliers=False, master_plot=None) -> (
+def manipulate_features(features: np.ndarray, file_data: np.ndarray, find_and_remove_outliers=False,
+                        show_outliers=False, master_plot=None) -> (
         np.ndarray, np.ndarray):
     """
 Return the features manipulated in a way as to make the algorithm for separating the data more accurate.
@@ -58,26 +59,31 @@ Return the features manipulated in a way as to make the algorithm for separating
         scalers[min_max_scaler] = np.full(features.shape[0], True)
         new_features = min_max_scaler.fit_transform(features)
 
-    outlier_detector = OneClassSVM(gamma=10)  # Seems to work best
+    if find_and_remove_outliers:
+        outlier_detector = OneClassSVM(gamma=10)  # Seems to work best
 
-    outlier_detector.fit(new_features)
-    outlier_prediction = outlier_detector.predict(new_features)
-    outliers = new_features[outlier_prediction == -1]
-    new_features = new_features[outlier_prediction == 1]
+        outlier_detector.fit(new_features)
+        outlier_prediction = outlier_detector.predict(new_features)
+        outliers = new_features[outlier_prediction == -1]
+        new_features = new_features[outlier_prediction == 1]
 
-    features = reverse_scalling(new_features, scalers, outlier_prediction)
+        features = reverse_scalling(new_features, scalers, outlier_prediction)
 
-    if show_outliers:
-        plot_hyperplane(outlier_detector, master_plot, interval=.04, colors="orange")
+        if show_outliers:
+            plot_hyperplane(outlier_detector, master_plot, interval=.04, colors="orange")
 
-    return new_features, outliers, features
+        return new_features, outliers, features
+    else:
+        features = reverse_scalling(new_features, scalers)
+        return new_features, features
 
 
-def reverse_scalling(features, scalers, outlier_prediction):
+def reverse_scalling(features, scalers, outlier_prediction=None):
     features = np.copy(features)
 
     for scaler, index in zip(scalers.keys(), scalers.values()):
-        index = index[outlier_prediction == 1]
+        if outlier_prediction is not None:
+            index = index[outlier_prediction == 1]
 
         features[index] = scaler.inverse_transform(features[index])
 
@@ -154,8 +160,10 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
 
         features, headers = get_features(file_data)
 
-        new_scaled_features, outliers, features = manipulate_features(features, file_data, self.show_outliers,
-                                                                      self.master_plot)
+        new_scaled_features, outliers, features = manipulate_features(features, file_data,
+                                                                      find_and_remove_outliers=True,
+                                                                      show_outliers=self.show_outliers,
+                                                                      master_plot=self.master_plot)
         # features = scaler.inverse_transform(new_scaled_features)
 
         labels = self.clf.predict(new_scaled_features)
