@@ -175,6 +175,12 @@ class LassoManager(object):
     def remove_points(self, ind):
         self.indexes = np.setdiff1d(self.indexes, ind, assume_unique=True)
 
+    def get_labels(self):
+        labels = np.zeros(self.full_array.shape[0])
+        labels[self.indexes] = 1
+
+        return labels
+
 
 class LassoSelection(LassoSelector):
     def __init__(self, ax, onselect):
