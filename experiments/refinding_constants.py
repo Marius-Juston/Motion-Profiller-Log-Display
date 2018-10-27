@@ -8,7 +8,6 @@ from matplotlib.gridspec import GridSpec
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.svm import OneClassSVM
 
 from visualize import helper, MODEL_FILE
 from visualize.helper import contains_key, find_linear_best_fit_line, get_features
@@ -149,10 +148,9 @@ fig.plot(lagError, crossTrackError, angleError)
 
 print(col)
 
-
 clf = joblib.load(MODEL_FILE)
 
-new_scaled_features,  features = manipulate_features(features, data)
+new_scaled_features, features = manipulate_features(features, data)
 # features = scaler.inverse_transform(new_scaled_features)
 
 labels = clf.predict(new_scaled_features)
@@ -166,7 +164,8 @@ print(XTE.shape)
 
 d = {
     "XTE": XTE, "lag": lagE, "angle": angleE,
-     col[0]: new_scaled_features[:, 0], col[1]: new_scaled_features[:, 1], col[2]: new_scaled_features[:, 2], "labels":color_labels}
+    col[0]: new_scaled_features[:, 0], col[1]: new_scaled_features[:, 1], col[2]: new_scaled_features[:, 2],
+    "labels": color_labels}
 print(d)
 
 # p = pandas.DataFrame()
