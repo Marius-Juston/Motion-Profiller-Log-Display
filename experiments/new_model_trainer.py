@@ -74,8 +74,7 @@ def train_model(open_path):
                     else:
                         all_features = np.concatenate((all_features, features))
 
-
-                        file_data['pathNumber'] += all_data["pathNumber"].max()
+                        file_data['pathNumber'] += (all_data["pathNumber"].max() + 1)
 
                         all_data = np.concatenate((all_data, file_data))
                 else:
