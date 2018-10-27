@@ -21,13 +21,22 @@ def go_through_process(all_features: np.ndarray, all_data: np.ndarray):
     all_features = all_features[selector.indexes]
     all_data = all_data[selector.indexes]
 
-    new_scaled_features, outliers, features = manipulate_features(all_features, all_data)
+    new_scaled_features, features = manipulate_features(all_features, all_data)
 
-    all_features = features
+    all_features = new_scaled_features
+
+    graphs = Graphs(all_features, title="Manipulated Features Outlier Selection",
+                    suptitle="Please unselect the outliers. Press [Enter] to confirm.")
+    selector = LassoManager(graphs)
+    plt.show()
+
+    all_features = all_features[selector.indexes]
+    all_data = all_data[selector.indexes]
 
     graphs = Graphs(all_features, title="Acceleration vs Deceleration Selection",
                     suptitle="Selected=accelerating, Unselected=decelerating. Press [Enter] to confirm.")
     selector = LassoManager(graphs)
+
     plt.show()
 
 
