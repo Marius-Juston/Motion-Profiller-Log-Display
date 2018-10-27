@@ -6,8 +6,6 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from skimage import measure
 from sklearn import svm
 
-from visualize.helper import plot_hyperplane
-
 SPACE_SAMPLING_POINTS = 100
 TRAIN_POINTS = 100
 
@@ -40,11 +38,8 @@ X_outliers = np.random.uniform(low=-4, high=4, size=(20, 3))
 # Create a OneClassSVM instance and fit it to the data
 
 
-
 clf = svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.1)
 clf.fit(X_train)
-
-
 
 # Predict the class of the various input created before
 y_pred_train = clf.predict(X_train)
@@ -65,7 +60,6 @@ Z = Z.reshape(xx.shape)
 fig = plt.figure()
 ax = fig.gca(projection='3d')
 fig.suptitle("Novelty Detection")
-
 
 # Plot the different input points using 3D scatter plotting
 b1 = ax.scatter(X_train[:, 0], X_train[:, 1], X_train[:, 2], c='white')

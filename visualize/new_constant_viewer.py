@@ -14,7 +14,8 @@ from visualize.helper import is_empty_model, is_valid_log, get_data, get_feature
     find_linear_best_fit_line, contains_key, is_straight_line, get_xy_limited
 
 
-def manipulate_features(features: np.ndarray, file_data: np.ndarray, show_outliers=False, master_plot=None) -> (np.ndarray, np.ndarray):
+def manipulate_features(features: np.ndarray, file_data: np.ndarray, show_outliers=False, master_plot=None) -> (
+        np.ndarray, np.ndarray):
     """
 Return the features manipulated in a way as to make the algorithm for separating the data more accurate.
     :param features: the features to use
@@ -143,7 +144,6 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
 
         plot_hyperplane(self.clf, self.master_plot, colors='orange')
 
-
     def graph(self, file_data):
         """
     Graphs the features from the log file. Creates a 3D graph with time, average power to motors and velocity as axises.
@@ -154,7 +154,8 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
 
         features, headers = get_features(file_data)
 
-        new_scaled_features, outliers, features = manipulate_features(features, file_data, self.show_outliers, self.master_plot)
+        new_scaled_features, outliers, features = manipulate_features(features, file_data, self.show_outliers,
+                                                                      self.master_plot)
         # features = scaler.inverse_transform(new_scaled_features)
 
         labels = self.clf.predict(new_scaled_features)
