@@ -37,10 +37,10 @@ Return the features manipulated in a way as to make the algorithm for separating
     scalers = {}
     if contains_key(file_data, "pathNumber"):
 
-        for i in range(file_data["pathNumber"].min(), file_data["pathNumber"].max() + 1):
+        for pathNumber in np.unique(file_data["pathNumber"]):
             min_max_scaler = MinMaxScaler()
 
-            path_number = file_data["pathNumber"] == i
+            path_number = file_data["pathNumber"] == pathNumber
             scalers[min_max_scaler] = path_number
 
             features_at_path = features[path_number]
