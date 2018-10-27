@@ -15,13 +15,17 @@ from visualize.helper import is_empty_model, is_valid_log, get_data, get_feature
 
 
 def manipulate_features(features: np.ndarray, file_data: np.ndarray, find_and_remove_outliers=False,
-                        show_outliers=False, master_plot=None) -> (
+                        show_outliers=False, master_plot=None, view_individual_paths=False) -> (
         np.ndarray, np.ndarray):
     """
 Return the features manipulated in a way as to make the algorithm for separating the data more accurate.
     :param features: the features to use
     :param file_data: the log file's data
     :return: the manipulated features array, the outliers of the data set and the data scaler
+    :param find_and_remove_outliers:
+    :param show_outliers:
+    :param master_plot:
+    :param view_individual_paths:
     """
 
     if contains_key(file_data, "motionState"):
@@ -49,6 +53,11 @@ Return the features manipulated in a way as to make the algorithm for separating
 
             features_at_path = min_max_scaler.fit_transform(features_at_path)
             outliers_free_features = features_at_path
+
+            if view_individual_paths:
+                fig = plt.figure()
+
+                fig.gca().scatter(features_at_path[:, 0], features_at_path[:, 1])
 
             if new_features is None:
                 new_features = outliers_free_features
