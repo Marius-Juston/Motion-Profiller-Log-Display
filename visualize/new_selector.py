@@ -32,9 +32,9 @@ class Graphs(object):
 
         self._combination_figure = plt.figure("3D Combination")
 
-        self._features_graph = Axes3D(self._combination_figure)
+        self.all_features_axes = Axes3D(self._combination_figure)
 
-        self.all_feature_graph = self._features_graph.scatter(features[:, 0], features[:, 1], features[:, 2])
+        self.all_feature_graph = self.all_features_axes.scatter(features[:, 0], features[:, 1], features[:, 2])
 
         self._initialize_plots()
 
@@ -48,9 +48,9 @@ class Graphs(object):
         self._power_time.set_ylabel("Time")
         self._power_time.set_xlabel("Average power")
 
-        self._features_graph.set_xlabel("Average Power")
-        self._features_graph.set_ylabel("Velocity")
-        self._features_graph.set_zlabel("Time")
+        self.all_features_axes.set_xlabel("Average Power")
+        self.all_features_axes.set_ylabel("Velocity")
+        self.all_features_axes.set_zlabel("Time")
 
     def close_figures(self):
         plt.close(self._fig)
