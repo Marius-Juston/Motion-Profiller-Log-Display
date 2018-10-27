@@ -6,6 +6,8 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from skimage import measure
 from sklearn import svm
 
+from visualize.helper import plot_hyperplane
+
 SPACE_SAMPLING_POINTS = 100
 TRAIN_POINTS = 100
 
@@ -36,8 +38,13 @@ X_test = np.r_[X + 2, X - 2, X + [2, 2, 0]]
 X_outliers = np.random.uniform(low=-4, high=4, size=(20, 3))
 
 # Create a OneClassSVM instance and fit it to the data
+
+
+
 clf = svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.1)
 clf.fit(X_train)
+
+
 
 # Predict the class of the various input created before
 y_pred_train = clf.predict(X_train)
@@ -59,6 +66,7 @@ fig = plt.figure()
 ax = fig.gca(projection='3d')
 fig.suptitle("Novelty Detection")
 
+
 # Plot the different input points using 3D scatter plotting
 b1 = ax.scatter(X_train[:, 0], X_train[:, 1], X_train[:, 2], c='white')
 b2 = ax.scatter(X_test[:, 0], X_test[:, 1], X_test[:, 2], c='green')
@@ -69,7 +77,7 @@ c = ax.scatter(X_outliers[:, 0], X_outliers[:, 1], X_outliers[:, 2], c='red')
 # SVM. This is done using the marching cubes algorithm implementation from
 # scikit-image.
 
-verts, faces, _, _ = measure.marching_cubes(Z, 0)
+verts, faces, _, _ = measure.marching_cubes_lewiner(Z, 0)
 # Scale and transform to actual size of the interesting volume
 verts = verts * \
         [X_MAX - X_MIN, Y_MAX - Y_MIN, Z_MAX - Z_MIN] / SPACE_SAMPLING_POINTS
