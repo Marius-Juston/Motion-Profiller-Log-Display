@@ -76,18 +76,18 @@ Return the features manipulated in a way as to make the algorithm for separating
         outliers = new_features[outlier_prediction == -1]
         new_features = new_features[outlier_prediction == 1]
 
-        features = reverse_scalling(new_features, scalers, outlier_prediction)
+        features = reverse_scaling(new_features, scalers, outlier_prediction)
 
         if show_outliers:
             plot_hyperplane(outlier_detector, master_plot, interval=.04, colors="orange")
 
         return new_features, outliers, features
     else:
-        features = reverse_scalling(new_features, scalers)
+        features = reverse_scaling(new_features, scalers)
         return new_features, features
 
 
-def reverse_scalling(features, scalers, outlier_prediction=None):
+def reverse_scaling(features, scalers, outlier_prediction=None):
     features = np.copy(features)
 
     for scaler, index in zip(scalers.keys(), scalers.values()):
