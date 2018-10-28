@@ -9,6 +9,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import OneClassSVM
 
 import visualize
+from experiments.new_model_trainer import remove_outliers
 from visualize import MODEL_FILE
 from visualize.helper import is_empty_model, is_valid_log, get_data, get_features, plot_hyperplane, plot_subplots, \
     find_linear_best_fit_line, contains_key, is_straight_line, get_xy_limited
@@ -174,6 +175,12 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
                                                                       show_outliers=self.show_outliers,
                                                                       master_plot=self.master_plot)
         # features = scaler.inverse_transform(new_scaled_features)
+
+        selector = remove_outliers(new_scaled_features)
+
+        new_scaled_features = new_scaled_features[selector.indexes]
+        outliers = outliers[selector.indexes]
+        features = features[selector.indexes]
 
         labels = self.clf.predict(new_scaled_features)
         color_labels = list(map(lambda x: 'r' if x == 0 else 'b', labels))
