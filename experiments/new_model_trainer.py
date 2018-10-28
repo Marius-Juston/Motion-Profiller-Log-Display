@@ -1,47 +1,13 @@
 import os
 
 import easygui
-import matplotlib.pyplot as plt
-import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 
 import visualize
 from visualize import LEGACY_COLUMNS
 from visualize.helper import is_valid_log, get_data, get_features, plot_hyperplane
-from visualize.new_constant_viewer import manipulate_features
-from visualize.new_selector import Graphs, LassoManager
-
-
-def remove_outliers(all_features):
-    graphs = Graphs(all_features, title="Outlier Selection",
-                    suptitle="Please unselect the outliers. Press [Enter] to confirm.")
-    selector = LassoManager(graphs)
-    plt.show()
-
-    return selector
-
-
-def manipulate_features_and_remove_outliers(all_features, all_data):
-    new_scaled_features, features = manipulate_features(all_features, all_data)
-
-    all_features = new_scaled_features
-
-    graphs = Graphs(all_features, title="Manipulated Features Outlier Selection",
-                    suptitle="Please unselect the outliers. Press [Enter] to confirm.")
-    selector = LassoManager(graphs)
-    plt.show()
-
-    return selector
-
-
-def select_accelerating_vs_decelerating(all_features):
-    graphs = Graphs(all_features, title="Acceleration vs Deceleration Selection",
-                    suptitle="Selected=accelerating, Unselected=decelerating. Press [Enter] to confirm.")
-    selector = LassoManager(graphs)
-
-    plt.show()
-    return selector
+from visualize.new_selector import *
 
 
 def go_through_process(all_features: np.ndarray, all_data: np.ndarray):
@@ -50,7 +16,7 @@ def go_through_process(all_features: np.ndarray, all_data: np.ndarray):
     all_features = all_features[selector.indexes]
     all_data = all_data[selector.indexes]
 
-    selector = manipulate_features_and_remove_outliers(all_features, all_data)
+    all_features, features, selector = manipulate_features_and_remove_outliers(all_features, all_data)
 
     all_features = all_features[selector.indexes]
     all_data = all_data[selector.indexes]

@@ -5,6 +5,8 @@ from matplotlib.path import Path
 from matplotlib.widgets import LassoSelector
 from mpl_toolkits.mplot3d import Axes3D
 
+from visualize.new_constant_viewer import manipulate_features
+
 
 class Graphs(object):
 
@@ -59,6 +61,11 @@ class Graphs(object):
     def add_key_press_handler(self, handler):
         self._fig.canvas.mpl_connect("key_press_event", handler)
         self._combination_figure.canvas.mpl_connect("key_press_event", handler)
+
+    def show(self):
+        self._fig.show()
+        self._combination_figure.show()
+        plt.show()
 
 
 class LassoManager(object):
@@ -193,3 +200,35 @@ class LassoSelection(LassoSelector):
         self.line.set_data([[], []])
         self.line.set_visible(False)
         self.verts = None
+
+
+def remove_outliers(all_features):
+    graphs = Graphs(all_features, title="Outlier Selection",
+                    suptitle="Please unselect the outliers. Press [Enter] to confirm.")
+    selector = LassoManager(graphs)
+    graphs.show()
+    plt.show()
+
+    return selector
+
+
+def manipulate_features_and_remove_outliers(all_features, all_data):
+    new_scaled_features, features = manipulate_features(all_features, all_data)
+
+    all_features = new_scaled_features
+
+    graphs = Graphs(all_features, title="Manipulated Features Outlier Selection",
+                    suptitle="Please unselect the outliers. Press [Enter] to confirm.")
+    selector = LassoManager(graphs)
+    graphs.show()
+
+    return new_scaled_features, features, selector
+
+
+def select_accelerating_vs_decelerating(all_features):
+    graphs = Graphs(all_features, title="Acceleration vs Deceleration Selection",
+                    suptitle="Selected=accelerating, Unselected=decelerating. Press [Enter] to confirm.")
+    selector = LassoManager(graphs)
+
+    graphs.show()
+    return selector
