@@ -1,18 +1,14 @@
 import os
 
 import easygui
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib.gridspec import GridSpec
 from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import OneClassSVM
 
 import visualize
-from experiments.new_model_trainer import remove_outliers
 from visualize import MODEL_FILE
-from visualize.helper import is_empty_model, is_valid_log, get_data, get_features, plot_hyperplane, plot_subplots, \
-    find_linear_best_fit_line, contains_key, is_straight_line, get_xy_limited
+from visualize.helper import *
+from visualize.new_selector import *
 
 
 def manipulate_features(features: np.ndarray, file_data: np.ndarray, find_and_remove_outliers=False,
@@ -115,17 +111,21 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
         self.showing = False
         self.show_outliers = show_outliers
         self.clf = clf
-        self.fig = plt.figure("Scaled 3d  data")
 
-        fig_manager = plt.get_current_fig_manager()
-        fig_manager.window.showMaximized()
+        self.fig = None
+        self.gs = None
+        self.master_plot = None
+        self.time_power = None
+        self.time_velocity = None
+        self.power_velocity = None
 
-        self.gs = GridSpec(3, 4, self.fig)
-
-        self.master_plot = self.fig.add_subplot(self.gs[:3, :3], projection='3d')
-        self.time_velocity = self.fig.add_subplot(self.gs[0, -1])
-        self.time_power = self.fig.add_subplot(self.gs[1, -1])
-        self.power_velocity = self.fig.add_subplot(self.gs[2, -1])
+        self.file_data = None
+        self.headers = None
+        self.new_scaled_features = None
+        self.features = None
+        self.outliers = None
+        self.labels = None
+        self.color_labels = None
 
     def show(self):
         """
@@ -133,7 +133,31 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
         """
 
         if not self.showing:
+            self.fig = plt.figure("Scaled 3d  data")
+
+            fig_manager = plt.get_current_fig_manager()
+            fig_manager.window.showMaximized()
+
+            self.gs = GridSpec(3, 4, self.fig)
+
+            self.master_plot = self.fig.add_subplot(self.gs[:3, :3], projection='3d')
+            self.time_velocity = self.fig.add_subplot(self.gs[0, -1])
+            self.time_power = self.fig.add_subplot(self.gs[1, -1])
+            self.power_velocity = self.fig.add_subplot(self.gs[2, -1])
+
             self.gs.tight_layout(self.fig)
+            self.clear_graphs()
+
+            self.plot_3d_plot(self.new_scaled_features, self.headers, self.color_labels)
+
+            if self.show_outliers:
+                self.master_plot.scatter(self.outliers[:, 0], self.outliers[:, 1], self.outliers[:, 2], c="black")
+
+            self.show_constants_graph(self.features, self.file_data, self.labels, c=self.color_labels)
+
+            plot_subplots(self.new_scaled_features, self.headers,
+                          (self.time_velocity, self.time_power, self.power_velocity),
+                          self.color_labels)
 
             self.fig.show()
             self.showing = True
@@ -166,36 +190,25 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
     It also decomposes the dimensions into individual 2D graphs.
         :param file_data: the log file to use to extract the data from
         """
-        self.clear_graphs()
 
-        features, headers = get_features(file_data)
+        self.file_data = file_data
+        self.features, self.headers = get_features(file_data)
 
-        new_scaled_features, outliers, features = manipulate_features(features, file_data,
-                                                                      find_and_remove_outliers=True,
-                                                                      show_outliers=self.show_outliers,
-                                                                      master_plot=self.master_plot)
+        # FIXME make it so that the outliers can be visualized as well
+        self.new_scaled_features, self.outliers, self.features = manipulate_features(self.features, file_data,
+                                                                                     find_and_remove_outliers=True,
+                                                                                     show_outliers=self.show_outliers,
+                                                                                     master_plot=self.master_plot
+                                                                                     )
         # features = scaler.inverse_transform(new_scaled_features)
 
-        selector = remove_outliers(new_scaled_features)
+        selector = remove_outliers(self.new_scaled_features)
 
-        new_scaled_features = new_scaled_features[selector.indexes]
-        outliers = outliers[selector.indexes]
-        features = features[selector.indexes]
+        self.new_scaled_features = self.new_scaled_features[selector.indexes]
+        self.features = self.features[selector.indexes]
 
-        labels = self.clf.predict(new_scaled_features)
-        color_labels = list(map(lambda x: 'r' if x == 0 else 'b', labels))
-
-        self.plot_3d_plot(new_scaled_features, headers, color_labels)
-
-        if self.show_outliers:
-            self.master_plot.scatter(outliers[:, 0], outliers[:, 1], outliers[:, 2], c="black")
-
-        self.show_constants_graph(features, file_data, labels, c=color_labels)
-
-        plot_subplots(new_scaled_features, headers, (self.time_velocity, self.time_power, self.power_velocity),
-                      color_labels)
-
-        plt.draw()
+        self.labels = self.clf.predict(self.new_scaled_features)
+        self.color_labels = list(map(lambda x: 'r' if x == 0 else 'b', self.labels))
 
     def clear_graphs(self):
         """
