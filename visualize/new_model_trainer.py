@@ -3,8 +3,8 @@ import os
 import easygui
 
 import visualize
-from visualize.helper import get_features, is_valid_log, get_data
 from legacy.processing import OutlierAndScalingSelection
+from visualize.helper import get_features, is_valid_log, get_data
 
 
 def train_model(open_path):
