@@ -13,15 +13,16 @@ from visualize.new_constant_viewer import manipulate_features
 from visualize.new_selector import Graphs, LassoManager
 
 
-def go_through_process(all_features: np.ndarray, all_data: np.ndarray):
+def remove_outliers(all_features):
     graphs = Graphs(all_features, title="Outlier Selection",
                     suptitle="Please unselect the outliers. Press [Enter] to confirm.")
     selector = LassoManager(graphs)
     plt.show()
 
-    all_features = all_features[selector.indexes]
-    all_data = all_data[selector.indexes]
+    return selector
 
+
+def manipulate_features_and_remove_outliers(all_features, all_data):
     new_scaled_features, features = manipulate_features(all_features, all_data)
 
     all_features = new_scaled_features
@@ -31,14 +32,30 @@ def go_through_process(all_features: np.ndarray, all_data: np.ndarray):
     selector = LassoManager(graphs)
     plt.show()
 
-    all_features = all_features[selector.indexes]
-    all_data = all_data[selector.indexes]
+    return selector
 
+
+def select_accelerating_vs_decelerating(all_features):
     graphs = Graphs(all_features, title="Acceleration vs Deceleration Selection",
                     suptitle="Selected=accelerating, Unselected=decelerating. Press [Enter] to confirm.")
     selector = LassoManager(graphs)
 
     plt.show()
+    return selector
+
+
+def go_through_process(all_features: np.ndarray, all_data: np.ndarray):
+    selector = remove_outliers(all_features)
+
+    all_features = all_features[selector.indexes]
+    all_data = all_data[selector.indexes]
+
+    selector = manipulate_features_and_remove_outliers(all_features, all_data)
+
+    all_features = all_features[selector.indexes]
+    all_data = all_data[selector.indexes]
+
+    selector = select_accelerating_vs_decelerating(all_features)
 
     clf = SVC()
     clf.fit(all_features, selector.get_labels())
