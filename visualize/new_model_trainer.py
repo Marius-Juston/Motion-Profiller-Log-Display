@@ -4,7 +4,7 @@ import easygui
 
 import visualize
 from visualize.helper import get_features, is_valid_log, get_data
-from visualize.processing import OutlierAndScalingSelection
+from legacy.processing import OutlierAndScalingSelection
 
 
 def train_model(open_path):
