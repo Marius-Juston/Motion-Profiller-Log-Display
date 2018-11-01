@@ -5,7 +5,7 @@ from matplotlib.path import Path
 from matplotlib.widgets import LassoSelector
 from mpl_toolkits.mplot3d import Axes3D
 
-from visualize.new_constant_viewer import manipulate_features
+from visualize.feature_manipulator import manipulate_features
 
 
 class Graphs(object):
