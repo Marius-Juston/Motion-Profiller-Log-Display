@@ -1,7 +1,8 @@
 # coding=utf-8
 import easygui
 
-from visualize import new_log_viewer, new_constant_viewer, new_model_trainer
+from visualize import new_log_viewer, new_constant_viewer
+from legacy import new_model_trainer
 from visualize import open_path
 
 LOGS = "[L]ogs"
