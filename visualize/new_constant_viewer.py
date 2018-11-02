@@ -69,6 +69,10 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
             self.gs.tight_layout(self.fig)
             self.clear_graphs()
 
+            plot_subplots(self.new_scaled_features, self.headers,
+                          (self.time_velocity, self.time_power, self.power_velocity),
+                          self.color_labels)
+
             self.plot_3d_plot(self.new_scaled_features, self.headers, self.color_labels)
 
             if self.show_outliers:
@@ -76,10 +80,6 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
                 plot_hyperplane(self.outlier_detector, self.master_plot, interval=.04, colors="orange")
 
             self.show_constants_graph(self.features, self.file_data, self.labels, c=self.color_labels)
-
-            plot_subplots(self.new_scaled_features, self.headers,
-                          (self.time_velocity, self.time_power, self.power_velocity),
-                          self.color_labels)
 
             self.fig.show()
             self.showing = True
