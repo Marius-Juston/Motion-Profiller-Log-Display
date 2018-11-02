@@ -123,6 +123,7 @@ Class meant to plot log file data for the Motion Profiler of Walton Robotics
         self.show_buttons = show_buttons
         self.files = files
         self.sorted_names = sort_files(files)
+        self.trim_paths()
 
         self.fig = plt.figure(figsize=(10, 5))
 
@@ -155,6 +156,19 @@ Class meant to plot log file data for the Motion Profiler of Walton Robotics
         self.current_plot_index = 0
 
         self.plot_index(self.current_plot_index)
+
+    def trim_paths(self):
+        for file in self.files:
+            data = self.files[file]
+
+            min_path_number = data["pathNumber"].min()
+
+            min_remover = np.logical_and(data["pathNumber"] != min_path_number,
+                                         data["motionState"] != "WAITING")
+
+            data = data[min_remover]
+
+            self.files[file] = data
 
     def clear_buttons(self):
         """
@@ -584,6 +598,18 @@ The class that handles the animation of a robot given its path data
                 self.playing = True
 
 
+def file_validation(file_data, needed_keys):
+    if file_data is None:
+        return False
+
+    motionless = np.alltrue(
+        np.logical_or(file_data["motionState"] == "WAITING", file_data["motionState"] == "FINISHING"))
+
+    valid = is_valid_log(file_data, needed_keys)
+
+    return valid and not motionless
+
+
 def main(open_path):
     """
 This is the main loop which runs until the user no selects any file.
@@ -602,7 +628,7 @@ This is the main loop which runs until the user no selects any file.
             for file in files:
                 file_data = get_data(file)
 
-                if is_valid_log(file_data, NEEDED_KEYS):
+                if file_validation(file_data, NEEDED_KEYS):
                     try:
                         name = datetime.strptime(os.path.basename(file), "%Y-%m-%d %H-%M-%S.csv")
                     except ValueError:
@@ -613,9 +639,10 @@ This is the main loop which runs until the user no selects any file.
                     easygui.msgbox(
                         "The file {0:s} is not a valid file, it will not be plotted.".format(os.path.basename(file)))
 
-            plots = Plot(csv_files)
-            plots.show()
-            plots.close_all()
+            if len(csv_files) > 0:
+                plots = Plot(csv_files)
+                plots.show()
+                plots.close_all()
         else:
             return open_path
 

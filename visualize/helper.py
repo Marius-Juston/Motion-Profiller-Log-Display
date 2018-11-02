@@ -73,7 +73,7 @@ Retrieves the data from the csv log file.
     for delimiter in DELIMITERS:
         try:
             return np.genfromtxt(file, delimiter=delimiter, dtype=DTYPE, names=True, encoding=ENCODING)
-        except ValueError:
+        except (ValueError, IndexError):
             pass
 
 
@@ -259,9 +259,11 @@ Checks if the log is valid (has the needed columns headers)
     :param headers: the headers needed
     :return: True if it has all the headers False otherwise
     """
-    fields = file.dtype.fields.keys()
+    if file is not None:
+        fields = file.dtype.fields.keys()
 
-    return all(key in fields for key in headers)
+        return all(key in fields for key in headers)
+    return False
 
 
 def contains_key(file: np.ndarray, key: str) -> bool:
