@@ -87,6 +87,7 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
             self.show_constants_graph(self.features, self.file_data, self.labels, c=self.color_labels)
 
             self.fig.show()
+            plt.show()
             self.showing = True
 
     def close_all(self):
@@ -167,13 +168,14 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
                            "As an ongoing feature the program will be able detect kLag, etc... "
                            "however for the instance this features has not been added")
 
-        figure = plt.figure("Constants graph")
-        constants_plot = figure.gca()
+        constant_figure = plt.figure("Constants graph")
+        constants_plot = constant_figure.gca()
         constants_plot.set_xlabel("Velocity")
         constants_plot.set_ylabel("Average Power")
 
-        fig_manager = plt.get_current_fig_manager()
-        fig_manager.window.showMaximized()
+        # fig_manager = plt.get_current_fig_manager()
+        # fig_manager.window.showMaximized()
+        constant_figure.canvas.manager.window.showMaximized()
 
         x = features[:, 1]
         y = features[:, 0]
@@ -219,7 +221,7 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
 
         self.copy_constants()
 
-        figure.canvas.callbacks.connect('button_press_event', self.handle_mouse_click)
+        constant_figure.canvas.callbacks.connect('button_press_event', self.handle_mouse_click)
 
         return average_coef, average_intercept, k_acc
 
@@ -228,6 +230,8 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
             self.copy_constants()
 
     def copy_constants(self):
+        easygui.msgbox("The constants have been saved into your clipboard. Press Ctrl+V to paste them.")
+
         constants = "public static final double kV = {0};\r\n" \
                     "public static final double kK = {1};\r\n" \
                     "public static final double kAcc = {2};\r\n" \
