@@ -3,6 +3,7 @@ import os
 import easygui
 import matplotlib.pyplot as plt
 import numpy as np
+import pyperclip
 from matplotlib.gridspec import GridSpec
 from sklearn.externals import joblib
 
@@ -47,6 +48,10 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
         self.labels = None
         self.color_labels = None
         self.outlier_detector = None
+
+        self.kV = 1
+        self.kK = 1
+        self.kAcc = 1
 
     def show(self):
         """
@@ -203,12 +208,32 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
         acceleration_intercept = (intercept_accelerating - average_intercept)
         k_acc = ((x.max() + x.min()) / 2) * acceleration_coefficient + acceleration_intercept
 
+        self.kV = average_coef
+        self.kK = average_intercept
+        self.kAcc = k_acc
+
         bbox_props = dict(boxstyle="round,pad=0.3", fc="cyan", ec="b", lw=2)
         constants_plot.text(x_lim[0], y_lim[1],
                             "kV: {}\nkK: {}\nkAcc: {}".format(average_coef, average_intercept, k_acc), ha="left",
                             va="top", bbox=bbox_props)
 
+        self.copy_constants()
+
+        figure.canvas.callbacks.connect('button_press_event', self.handle_mouse_click)
+
         return average_coef, average_intercept, k_acc
+
+    def handle_mouse_click(self, event):
+        if event.dblclick:
+            self.copy_constants()
+
+    def copy_constants(self):
+        constants = "public static final double kV = {0};\r\n" \
+                    "public static final double kK = {1};\r\n" \
+                    "public static final double kAcc = {2};\r\n" \
+            .format(self.kK, self.kK, self.kAcc)
+
+        pyperclip.copy(constants)
 
 
 def find_constants(open_path):
