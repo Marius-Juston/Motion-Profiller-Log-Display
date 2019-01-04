@@ -161,7 +161,7 @@ Class meant to plot log file data for the Motion Profiler of Walton Robotics
         for file in self.files:
             data = self.files[file]
 
-            if 'pathNumber' in data.dtype.fields:
+            if contains_key(data, "pathNumber"):
                 min_path_number = data["pathNumber"].min()
 
                 min_remover = np.logical_and(data["pathNumber"] != min_path_number,
