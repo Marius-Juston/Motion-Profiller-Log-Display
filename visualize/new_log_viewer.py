@@ -598,16 +598,17 @@ The class that handles the animation of a robot given its path data
                 self.playing = True
 
 
-def file_validation(file_data, needed_keys):
+def has_motion_data(file_data):
     if file_data is None:
         return False
 
-    motionless = np.alltrue(
-        np.logical_or(file_data["motionState"] == "WAITING", file_data["motionState"] == "FINISHING"))
+    if contains_key(file_data, "motionState"):
+        motionless = np.alltrue(
+            np.logical_or(file_data["motionState"] == "WAITING", file_data["motionState"] == "FINISHING"))
 
-    valid = is_valid_log(file_data, needed_keys)
+        return not motionless
 
-    return valid and not motionless
+    return True
 
 
 def main(open_path):
@@ -628,13 +629,28 @@ This is the main loop which runs until the user no selects any file.
             for file in files:
                 file_data = get_data(file)
 
-                if file_validation(file_data, NEEDED_KEYS):
-                    try:
-                        name = datetime.strptime(os.path.basename(file), "%Y-%m-%d %H-%M-%S.csv")
-                    except ValueError:
-                        name = os.path.basename(file).split(".")[0]
-                    csv_files[name] = file_data
+                legacy_log = is_valid_log(file_data, visualize.LEGACY_COLUMNS)
+                current_log = is_valid_log(file_data)
 
+                if legacy_log or current_log:
+                    show_log = True
+
+                    if legacy_log and not current_log:
+                        easygui.msgbox("Because this log ({}) is missing information that makes it optimal "
+                                       "for manipulating the data efficiently results may be inaccurate"
+                                       .format(os.path.basename(file)))
+                    else:
+                        robot_moved = has_motion_data(file_data)
+
+                        if not robot_moved:
+                            easygui.msgbox("Because the robot did not move this motion will not be shown")
+                            show_log = False
+                    if show_log:
+                        try:
+                            name = datetime.strptime(os.path.basename(file), "%Y-%m-%d %H-%M-%S.csv")
+                        except ValueError:
+                            name = os.path.basename(file).split(".")[0]
+                        csv_files[name] = file_data
                 else:
                     easygui.msgbox(
                         "The file {0:s} is not a valid file, it will not be plotted.".format(os.path.basename(file)))
