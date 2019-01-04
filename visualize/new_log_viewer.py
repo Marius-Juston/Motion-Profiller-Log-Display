@@ -161,14 +161,15 @@ Class meant to plot log file data for the Motion Profiler of Walton Robotics
         for file in self.files:
             data = self.files[file]
 
-            min_path_number = data["pathNumber"].min()
+            if 'pathNumber' in data.dtype.fields:
+                min_path_number = data["pathNumber"].min()
 
-            min_remover = np.logical_and(data["pathNumber"] != min_path_number,
-                                         data["motionState"] != "WAITING")
+                min_remover = np.logical_and(data["pathNumber"] != min_path_number,
+                                             data["motionState"] != "WAITING")
 
-            data = data[min_remover]
+                data = data[min_remover]
 
-            self.files[file] = data
+                self.files[file] = data
 
     def clear_buttons(self):
         """
