@@ -235,7 +235,7 @@ Class meant to visualize the constants of a log file for the Motion Profiler of 
         constants = "public static final double kV = {0};\r\n" \
                     "public static final double kK = {1};\r\n" \
                     "public static final double kAcc = {2};\r\n" \
-            .format(self.kK, self.kK, self.kAcc)
+            .format(self.kV, self.kK, self.kAcc)
 
         pyperclip.copy(constants)
 
