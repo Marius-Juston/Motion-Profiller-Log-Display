@@ -644,7 +644,8 @@ This is the main loop which runs until the user no selects any file.
                         robot_moved = has_motion_data(file_data)
 
                         if not robot_moved:
-                            easygui.msgbox("Because the robot did not move this motion will not be shown")
+                            easygui.msgbox("Because the robot did not move this motion ({}) will not be shown"
+                                           .format(os.path.basename(file)))
                             show_log = False
                     if show_log:
                         try:
