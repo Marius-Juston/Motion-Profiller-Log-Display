@@ -164,8 +164,8 @@ Class meant to plot log file data for the Motion Profiler of Walton Robotics
             if is_valid_log(data, ["pathNumber", "motionState"]):
                 min_path_number = data["pathNumber"].min()
 
-                min_remover = np.logical_and(data["pathNumber"] != min_path_number,
-                                             data["motionState"] != "WAITING")
+                min_remover = np.logical_not(np.logical_and(data["pathNumber"] == min_path_number,
+                                                            data["motionState"] == "WAITING"))
 
                 data = data[min_remover]
 
