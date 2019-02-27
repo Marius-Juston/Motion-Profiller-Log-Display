@@ -1,4 +1,5 @@
 
 .idea/other.xml
 .idea/workspace.xml
-*.
+dist/
+build/
