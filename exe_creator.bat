@@ -1,0 +1,1 @@
+pyinstaller --onefile --clean --hidden-import sklearn.neighbors.typedefs visualize/complete_runner.py
