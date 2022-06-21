@@ -1,6 +1,6 @@
 pyperclip==1.7.0
 easygui==0.98.1
-numpy==1.14.3
+numpy==1.22.0
 scikit_image==0.14.0
 matplotlib==2.2.2
 scikit_learn==0.19.1
